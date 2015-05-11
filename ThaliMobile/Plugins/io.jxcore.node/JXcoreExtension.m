@@ -4,6 +4,25 @@
 #import "JXcore.h"
 #import "JXcoreExtension.h"
 #import "CDVJXcore.h"
+#import "THEAppContext.h"
+
+// Starts communications.
+static void startCommunications(NSArray * array, NSString * callbackId)
+{
+    [[THEAppContext singleton] startCommunications];
+    [JXcore callEventCallback:callbackId
+                   withParams:nil];
+}
+
+// Stops communications.
+static void stopsCommunications(NSArray * array, NSString * callbackId)
+{
+    [[THEAppContext singleton] stopCommunications];
+    [JXcore callEventCallback:callbackId
+                   withParams:nil];
+}
+
+
 
 static void screenInfo(NSArray * arr_, NSString * callbackId)
 {
@@ -20,19 +39,28 @@ static void screenInfo(NSArray * arr_, NSString * callbackId)
 
     [JXcore callEventCallback:callbackId withParams:arr];
     
+#if 0
     dispatch_async(dispatch_get_main_queue(), ^() {
         NSMutableArray * barr = [[NSMutableArray alloc] init];
         [barr addObject:[NSNumber numberWithDouble:screenWidth]];
         [barr addObject:[NSNumber numberWithDouble:screenHeight]];
         [JXcore callEventCallback:@"brianCall" withParams:arr];
     });
+#endif
 }
 
+// JXcoreExtension implementation.
 @implementation JXcoreExtension
 
+// Defines methods.
 + (void)defineMethods
 {
-    [JXcore addNativeMethod:screenInfo withName:@"ScreenInfo"];
+    [JXcore addNativeMethod:startCommunications
+                   withName:@"StartCommunications"];
+    [JXcore addNativeMethod:stopCommunications
+                   withName:@"StopCommunications"];
+    [JXcore addNativeMethod:screenInfo
+                   withName:@"ScreenInfo"];
 }
 
 @end

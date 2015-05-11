@@ -33,6 +33,8 @@
 // Class singleton.
 + (instancetype)singleton;
 
+- (void)defineExtensions;
+
 // Starts communications.
 - (void)startCommunications;
 

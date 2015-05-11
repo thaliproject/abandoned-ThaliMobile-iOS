@@ -3,11 +3,12 @@
 #ifndef JXcordova_JXcoreExtension_h
 #define JXcordova_JXcoreExtension_h
 
+// JXcoreExtension interface.
 @interface JXcoreExtension : NSObject
 
-+ (void) defineMethods;
+// Defines methods.
++ (void)defineMethods;
 
 @end
-
 
 #endif

@@ -38,6 +38,9 @@
   }
 
   function jxcore_ready() {
+ 
+    
+ 
     // calling a method from JXcore (app.js)
     jxcore('asyncPing').call('Hello', function (ret, err) {
       // register getTime method from jxcore (app.js)
@@ -63,11 +66,11 @@
     // Set the ready function.
     jxcore.isReady(function () {
       // Log that JXcore is ready.
-      logInCordova('JXcore reports ready.');
+      logInCordova('JXcore ready');
 
-      jxcore('logger').register(logInCordova);
-
-      logInCordova('Loading app.js');
+      jxcore('logInCordova').register(logInCordova);
+                   
+      logInCordova('Loading ThaliMobile app.js');
       jxcore('app.js').loadMainFile(function (ret, err) {
         if (err) {
           alert("Error!!!" + err);

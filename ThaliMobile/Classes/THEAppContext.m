@@ -29,6 +29,7 @@
 #import <TSNPeerBluetooth.h>
 #import "THEAppContext.h"
 #include "jx.h"
+#import "JXcore.h"
 
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
@@ -71,6 +72,16 @@
     
     // Done.
     return appContext;
+}
+
+- (void)defineExtensions
+{
+    [JXcore addNativeMethod:startCommunications
+                   withName:@"StartCommunications"];
+    [JXcore addNativeMethod:stopCommunications
+                   withName:@"StopCommunications"];
+    [JXcore addNativeMethod:screenInfo
+                   withName:@"ScreenInfo"];
 }
 
 // Starts communications.
