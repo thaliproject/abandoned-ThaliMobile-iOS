@@ -4,15 +4,31 @@
     cordova('logInCordova').call(text);
   };
 
-  logInCordova('ThaliMobile app.js loaded');
+  // Log that the app.js file was loaded.
+  logInCordova('ThaliMobile app.js registering functions');
 
-  cordova('StartPeerBluetooth').callNative(function () {
-    logInCordova('StartPeerBluetooth was called');
+  // Register peerConnected callback.
+  cordova('peerConnected').registerToNative(function(peerID, peerName) {
+    logInCordova('************************** peerConnected called from native');
   });
 
-  logInCordova('After call to StartPeerBluetooth');
+  // Register peerDisconnected callback.
+  cordova('peerDisconnected').registerToNative(function(peerID, peerName) {
+    logInCordova('************************** peerDisconnected called from native.');
+  });
 
+  // Log that the app.js file was loaded.
+  logInCordova('ThaliMobile app.js loaded');
 
+  // Start peer Bluetooth.
+  cordova('StartPeerBluetooth').callNative(function () {
+    logInCordova('Peer Bluetooth started');
+  });
+  
+ 
+ 
+ 
+ 
 
 //  cordova('StartPeerBluetoothCommunications').callNative(function () {
 //    logInCordova('StartCommunications was called');
