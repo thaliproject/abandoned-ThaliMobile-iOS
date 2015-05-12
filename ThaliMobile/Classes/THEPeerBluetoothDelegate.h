@@ -21,36 +21,29 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  TSNPeerBluetooth
-//  TSNPeerBluetooth.h
+//  ThaliMobile
+//  THEPeerBluetoothDelegate.h
 //
 
-#import <Foundation/Foundation.h>
-#import <CoreLocation/CoreLocation.h>
-#import "TSNPeerBluetoothDelegate.h"
+// Forward declarations.
+@class THEPeerBluetooth;
 
-// TSNPeerBluetooth interface.v
-@interface TSNPeerBluetooth : NSObject
+// THEPeerBluetoothDelegate protocol.
+@protocol THEPeerBluetoothDelegate <NSObject>
+@required
 
-// Properties.
-@property (nonatomic, weak) id<TSNPeerBluetoothDelegate> delegate;
+// Notifies the delegate that a peer was connected.
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
+didConnectPeerIdentifier:(NSUUID *)peerIdentifier
+             peerName:(NSString *)peerName;
 
-// Class initializer.
-- (instancetype)initWithServiceType:(NSUUID *)serviceType
-                     peerIdentifier:(NSUUID *)peerIdentifier
-                           peerName:(NSString *)peerName;
+// Notifies the delegate that a peer was disconnected.
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
+didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier;
 
-// Starts peer Bluetooth.
-- (void)start;
-
-// Stops peer Bluetooth.
-- (void)stop;
-
-// Updates the location.
-- (void)updateLocation:(CLLocation *)location;
-
-// Updates the status. Returns YES if successful; otherwise, NO. A return value of NO
-// indicates that the status string was too long.
-- (BOOL)updateStatus:(NSString *)status;
+// Notifies the delegate that a peer status was received.
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
+ didReceivePeerStatus:(NSString *)peerStatus
+   fromPeerIdentifier:(NSUUID *)peerIdentifier;
 
 @end

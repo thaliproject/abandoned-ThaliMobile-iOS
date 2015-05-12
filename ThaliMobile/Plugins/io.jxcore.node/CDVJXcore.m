@@ -87,17 +87,17 @@ static void callback(NSArray *arr, NSString *_callbackId) {
 @implementation CDVJXcore
 
 + (CDVJXcore*) activeInstance {
-    return activeDevice;
+  return activeDevice;
 }
 
-- (void)pluginInitialize
-{
-    NSLog(@"------------->>> JXcore Cordova plugin initializing");
-    [JXcore startEngine:@"jxcore_cordova" withCallback:callback namedAs:@"  _callback_  "];
+- (void)pluginInitialize {
+  NSLog(@"JXcore Cordova plugin initializing");
+  
+  [JXcore startEngine:@"jxcore_cordova" withCallback:callback namedAs:@"  _callback_  "];
 
-    activeDevice = self;
-
-    [JXcoreExtension defineMethods];
+  activeDevice = self;
+  
+  [JXcoreExtension defineMethods];
 }
 
 - (void)Evaluate:(CDVInvokedUrlCommand *)command {

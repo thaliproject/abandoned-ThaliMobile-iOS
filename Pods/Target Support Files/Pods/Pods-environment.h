@@ -12,9 +12,3 @@
 #define COCOAPODS_VERSION_MINOR_TSNAtomicFlag 0
 #define COCOAPODS_VERSION_PATCH_TSNAtomicFlag 0
 
-// TSNPeerBluetooth
-#define COCOAPODS_POD_AVAILABLE_TSNPeerBluetooth
-#define COCOAPODS_VERSION_MAJOR_TSNPeerBluetooth 1
-#define COCOAPODS_VERSION_MINOR_TSNPeerBluetooth 0
-#define COCOAPODS_VERSION_PATCH_TSNPeerBluetooth 5
-

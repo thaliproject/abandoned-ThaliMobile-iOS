@@ -33,7 +33,8 @@
 // Class singleton.
 + (instancetype)singleton;
 
-- (void)defineExtensions;
+// Defines JavaScript extensions.
+- (void)defineJavaScriptExtensions;
 
 // Starts communications.
 - (void)startCommunications;

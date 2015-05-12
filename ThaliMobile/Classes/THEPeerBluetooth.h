@@ -21,36 +21,32 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  TSNPeerBluetooth
-//  TSNPeerBluetoothDelegate.h
+//  ThaliMobile
+//  THEPeerBluetooth.h
 //
 
-// Forward declarations.
-@class CLLocation;
-@class TSNPeerBluetooth;
+#import <Foundation/Foundation.h>
+#import "THEPeerBluetoothDelegate.h"
 
-// TSNPeerBluetoothDelegate protocol.
-@protocol TSNPeerBluetoothDelegate <NSObject>
-@required
+// THEPeerBluetooth interface.v
+@interface THEPeerBluetooth : NSObject
 
-// Notifies the delegate that a peer was connected.
-- (void)peerBluetooth:(TSNPeerBluetooth *)peerBluetooth
-didConnectPeerIdentifier:(NSUUID *)peerIdentifier
-             peerName:(NSString *)peerName
-         peerLocation:(CLLocation *)peerLocation;
+// Properties.
+@property (nonatomic, weak) id<THEPeerBluetoothDelegate> delegate;
 
-// Notifies the delegate that a peer was disconnected.
-- (void)peerBluetooth:(TSNPeerBluetooth *)peerBluetooth
-didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier;
+// Class initializer.
+- (instancetype)initWithServiceType:(NSUUID *)serviceType
+                     peerIdentifier:(NSUUID *)peerIdentifier
+                           peerName:(NSString *)peerName;
 
-// Notifies the delegate that a peer location was received.
-- (void)peerBluetooth:(TSNPeerBluetooth *)peerBluetooth
-didReceivePeerLocation:(CLLocation *)peerLocation
-   fromPeerIdentifier:(NSUUID *)peerIdentifier;
+// Starts peer Bluetooth.
+- (void)start;
 
-// Notifies the delegate that a peer status was received.
-- (void)peerBluetooth:(TSNPeerBluetooth *)peerBluetooth
- didReceivePeerStatus:(NSString *)peerStatus
-   fromPeerIdentifier:(NSUUID *)peerIdentifier;
+// Stops peer Bluetooth.
+- (void)stop;
+
+// Updates the status. Returns YES if successful; otherwise, NO. A return value of NO
+// indicates that the status string was too long.
+- (BOOL)updateStatus:(NSString *)status;
 
 @end

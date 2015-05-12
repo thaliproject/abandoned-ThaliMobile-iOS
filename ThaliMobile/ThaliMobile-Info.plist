@@ -184,5 +184,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This application monitors your location so that you can chat with those nearby you.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>bluetooth-peripheral</string>
+		<string>location</string>
+	</array>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This uses Bluetooth LE to transmit your location so that you can chat with those nearby you.</string>
 </dict>
 </plist>

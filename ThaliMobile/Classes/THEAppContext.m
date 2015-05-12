@@ -25,11 +25,18 @@
 //  THEAppContext.m
 //
 
-#import <TSNAtomicFlag.h>
-#import <TSNPeerBluetooth.h>
-#import "THEAppContext.h"
+#import <pthread.h>
 #include "jx.h"
 #import "JXcore.h"
+#import <TSNAtomicFlag.h>
+#import "THEPeerBluetooth.h"
+#import "THEAppContext.h"
+#import "THEPeer.h"
+
+
+// THEAppContext (THEPeerBluetoothDelegate) interface.
+@interface THEAppContext (THEPeerBluetoothDelegate)
+@end
 
 // THEAppContext (Internal) interface.
 @interface THEAppContext (Internal)
@@ -47,7 +54,13 @@
     TSNAtomicFlag * _atomicFlagEnabled;
     
     // Peer Bluetooth.
-    TSNPeerBluetooth * _peerBluetooth;
+    THEPeerBluetooth * _peerBluetooth;
+    
+    // The mutex used to protect access to things below.
+    pthread_mutex_t _mutex;
+    
+    // The peers dictionary.
+    NSMutableDictionary * _peers;
 }
 
 // Singleton.
@@ -74,14 +87,20 @@
     return appContext;
 }
 
-- (void)defineExtensions
+// Defines JavaScript extensions.
+- (void)defineJavaScriptExtensions
 {
-    [JXcore addNativeMethod:startCommunications
-                   withName:@"StartCommunications"];
-    [JXcore addNativeMethod:stopCommunications
-                   withName:@"StopCommunications"];
-    [JXcore addNativeMethod:screenInfo
-                   withName:@"ScreenInfo"];
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        [self startCommunications];
+        [JXcore callEventCallback:callbackId
+                       withParams:nil];
+    } withName:@"StartPeerBluetooth"];
+    
+    [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+        [self stopCommunications];
+        [JXcore callEventCallback:callbackId
+                       withParams:nil];
+    } withName:@"StopPeerBluetooth"];
 }
 
 // Starts communications.
@@ -99,6 +118,74 @@
     if ([_atomicFlagEnabled tryClear])
     {
         [_peerBluetooth stop];
+    }
+}
+
+@end
+
+// THEAppContext (TSNPeerBluetoothDelegate) implementation.
+@implementation THEAppContext (TSNPeerBluetoothDelegate)
+
+// Notifies the delegate that a peer was connected.
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
+didConnectPeerIdentifier:(NSUUID *)peerIdentifier
+             peerName:(NSString *)peerName
+{
+    // Allocate and initialize the peer.
+    THEPeer * peer = [[THEPeer alloc] initWithIdentifier:[peerIdentifier UUIDString]
+                                                    name:peerName];
+    
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // Set the peer in the peers dictionary.
+    [_peers setObject:peer
+               forKey:peerIdentifier];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+}
+
+// Notifies the delegate that a peer was disconnected.
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
+didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
+{
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // Find the peer.
+    THEPeer * peer = _peers[peerIdentifier];
+    if (!peer)
+    {
+        pthread_mutex_unlock(&_mutex);
+        return;
+    }
+    
+    // Remove the peer.
+    [_peers removeObjectForKey:peerIdentifier];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+}
+
+// Notifies the delegate that a peer status was received.
+- (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
+ didReceivePeerStatus:(NSString *)peerStatus
+   fromPeerIdentifier:(NSUUID *)peerIdentifier
+{
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // Find the peer.
+    THEPeer * peer = _peers[peerIdentifier];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    // If the peer was not found, ignore the update.
+    if (!peer)
+    {
+        return;
     }
 }
 
@@ -148,11 +235,11 @@
     NSUUID * peerIdentifier = [[NSUUID alloc] initWithUUIDBytes:[peerIdentifierData bytes]];
     
     // Allocate and initialize the peer Bluetooth context.
-    _peerBluetooth = [[TSNPeerBluetooth alloc] initWithServiceType:serviceType
+    _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
                                                     peerIdentifier:peerIdentifier
                                                           peerName:[[UIDevice currentDevice] name]];
-    [_peerBluetooth setDelegate:(id<TSNPeerBluetoothDelegate>)self];
-
+    [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
+    
     // Done.
     return self;
 }

@@ -45,6 +45,7 @@
  */
 
 #import "THEAppDelegate.h"
+#import "THEAppContext.h"
 #import "THEMainViewController.h"
 #import <Cordova/CDVPlugin.h>
 
@@ -78,7 +79,7 @@
 - (BOOL)application:(UIApplication*)application didFinishLaunchingWithOptions:(NSDictionary*)launchOptions
 {
     CGRect screenBounds = [[UIScreen mainScreen] bounds];
-
+    
     self.window = [[UIWindow alloc] initWithFrame:screenBounds];
     self.window.autoresizesSubviews = YES;
     self.viewController = [[THEMainViewController alloc] init];

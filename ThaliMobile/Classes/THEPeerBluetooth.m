@@ -21,47 +21,34 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  TSNPeerBluetooth
-//  TSNPeerBluetooth.m
+//  ThaliMobile
+//  THEPeerBluetooth.m
 //
 
 #import <pthread.h>
 #import <CoreBluetooth/CoreBluetooth.h>
-#import "TSNPeerBluetooth.h"
+#import "THEPeerBluetooth.h"
 
 // The maximum status length is 140 characters * 4 bytes (the maximum UTF-8 bytes per character).
 const NSUInteger kMaxStatusDataLength = 140 * 4;
 const NSUInteger kMaxPeerNameLength = 100;
 
-// Returns a new NSData fro the specified location coordinate.
-static inline NSData * dataForLocationCoordinate(CLLocationCoordinate2D locationCoordinate)
-{
-    // Construct and return an NSData with the location.
-    NSMutableData * data = [[NSMutableData alloc] initWithCapacity:sizeof(CLLocationDegrees) * 2];
-    [data appendBytes:&locationCoordinate.latitude
-               length:sizeof(locationCoordinate.latitude)];
-    [data appendBytes:&locationCoordinate.longitude
-               length:sizeof(locationCoordinate.longitude)];
-    return data;
-}
-
 // WHPErrorCode enumeration.
-typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
+typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 {
-    TSNPeerDescriptorStateDisconnected  = 1,
-    TSNPeerDescriptorStateConnecting    = 2,
-    TSNPeerDescriptorStateInitializing  = 3,
-    TSNPeerDescriptorStateConnected     = 4
+    THEPeerDescriptorStateDisconnected  = 1,
+    THEPeerDescriptorStateConnecting    = 2,
+    THEPeerDescriptorStateInitializing  = 3,
+    THEPeerDescriptorStateConnected     = 4
 };
 
-// TSNPeerDescriptor interface.
-@interface TSNPeerDescriptor : NSObject
+// THEPeerDescriptor interface.
+@interface THEPeerDescriptor : NSObject
 
 // Properties.
 @property (nonatomic) NSUUID * peerID;
 @property (nonatomic) NSString * peerName;
-@property (nonatomic) CLLocation * peerLocation;
-@property (nonatomic) TSNPeerDescriptorState state;
+@property (nonatomic) THEPeerDescriptorState state;
 @property (nonatomic) CBCharacteristic * characteristicPeerStatus1;
 @property (nonatomic) CBCharacteristic * characteristicPeerStatus2;
 @property (nonatomic) CBCharacteristic * characteristicPeerStatus3;
@@ -70,12 +57,12 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
-                      initialState:(TSNPeerDescriptorState)initialState;
+                      initialState:(THEPeerDescriptorState)initialState;
 
 @end
 
-// TSNPeerDescriptor implementation.
-@implementation TSNPeerDescriptor
+// THEPeerDescriptor implementation.
+@implementation THEPeerDescriptor
 {
 @private
     // The peripheral.
@@ -84,7 +71,7 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
-                      initialState:(TSNPeerDescriptorState)initialState
+                      initialState:(THEPeerDescriptorState)initialState
 {
     // Initialize superclass.
     self = [super init];
@@ -105,8 +92,8 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 @end
 
-// TSNCharacteristicUpdateDescriptor interface.
-@interface TSNCharacteristicUpdateDescriptor : NSObject
+// THECharacteristicUpdateDescriptor interface.
+@interface THECharacteristicUpdateDescriptor : NSObject
 
 // Properties.
 @property (nonatomic, readonly) NSData * value;
@@ -118,8 +105,8 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 @end
 
-// TSNCharacteristicUpdateDescriptor implementation.
-@implementation TSNCharacteristicUpdateDescriptor
+// THECharacteristicUpdateDescriptor implementation.
+@implementation THECharacteristicUpdateDescriptor
 
 // Class initializer.
 - (instancetype)initWithValue:(NSData *)value
@@ -144,20 +131,20 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 @end
 
-// TSNPeerBluetooth (CBPeripheralManagerDelegate) interface.
-@interface TSNPeerBluetooth (CBPeripheralManagerDelegate) <CBPeripheralManagerDelegate>
+// THEPeerBluetooth (CBPeripheralManagerDelegate) interface.
+@interface THEPeerBluetooth (CBPeripheralManagerDelegate) <CBPeripheralManagerDelegate>
 @end
 
-// TSNPeerBluetooth (CBCentralManagerDelegate) interface.
-@interface TSNPeerBluetooth (CBCentralManagerDelegate) <CBCentralManagerDelegate>
+// THEPeerBluetooth (CBCentralManagerDelegate) interface.
+@interface THEPeerBluetooth (CBCentralManagerDelegate) <CBCentralManagerDelegate>
 @end
 
-// TSNPeerBluetooth (CBPeripheralDelegate) interface.
-@interface TSNPeerBluetooth (CBPeripheralDelegate) <CBPeripheralDelegate>
+// THEPeerBluetooth (CBPeripheralDelegate) interface.
+@interface THEPeerBluetooth (CBPeripheralDelegate) <CBPeripheralDelegate>
 @end
 
-// TSNPeerBluetooth (Internal) interface.
-@interface TSNPeerBluetooth (Internal)
+// THEPeerBluetooth (Internal) interface.
+@interface THEPeerBluetooth (Internal)
 
 // Starts advertising.
 - (void)startAdvertising;
@@ -171,9 +158,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 // Stops scanning.
 - (void)stopScanning;
 
-// Updates the peer location characteristic.
-- (void)updatePeerLocationCharacteristic:(CLLocation *)peerLocation;
-
 // Updates the peer status characteristic.
 - (BOOL)updatePeerStatusCharacteristic:(NSString *)peerStatus;
 
@@ -184,8 +168,8 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 @end
 
-// TSNPeerBluetooth implementation.
-@implementation TSNPeerBluetooth
+// THEPeerBluetooth implementation.
+@implementation THEPeerBluetooth
 {
 @private
     // The peer identifier.
@@ -206,9 +190,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     // The peer name type.
     CBUUID * _peerNameType;
     
-    // The peer location type.
-    CBUUID * _peerLocationType;
-
     // The peer status 1 updated at type.
     CBUUID * _peerStatus1UpdatedAtType;
     
@@ -248,9 +229,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     // The peer name characteristic.
     CBMutableCharacteristic * _characteristicPeerName;
     
-    // The peer locaton characteristic.
-    CBMutableCharacteristic * _characteristicPeerLocation;
-
     // The peer status 1 updated at characteristic.
     CBMutableCharacteristic * _characteristicPeerStatus1UpdatedAt;
     
@@ -298,9 +276,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     
     // The scanning flag.
     BOOL _scanning;
-
-    // The location coordinate.
-    CLLocationCoordinate2D _peerLocationCoordinate;
     
     // The peer status index. This is the index (0-4) of the current peer status.
     NSUInteger _peerStatusIndex;
@@ -365,9 +340,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     // Allocate and initialize the peer name type.
     _peerNameType = [CBUUID UUIDWithString:@"2EFDAD55-5B85-4C78-9DE8-07884DC051FA"];
     
-    // Allocate and initialize the peer location type.
-    _peerLocationType = [CBUUID UUIDWithString:@"1EA08229-38D7-4927-98EC-113723C30C1B"];
-
     // Allocate and initialize the peer status 1 updated at type.
     _peerStatus1UpdatedAtType = [CBUUID UUIDWithString:@"1D4D00AA-49EC-4368-9FFA-5682D1A6D4B2"];
     
@@ -412,12 +384,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     _characteristicPeerName = [[CBMutableCharacteristic alloc] initWithType:_peerNameType
                                                                  properties:CBCharacteristicPropertyRead
                                                                       value:_canonicalPeerName
-                                                                permissions:CBAttributePermissionsReadable];
-
-    // Allocate and initialize the peer location characteristic.
-    _characteristicPeerLocation = [[CBMutableCharacteristic alloc] initWithType:_peerLocationType
-                                                                 properties:CBCharacteristicPropertyRead | CBCharacteristicPropertyNotify
-                                                                      value:nil
                                                                 permissions:CBAttributePermissionsReadable];
 
     // Allocate and initialize the peer status 1 updated at characteristic.
@@ -483,7 +449,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     // Set the service characteristics.
     [_service setCharacteristics:@[_characteristicPeerID,
                                    _characteristicPeerName,
-                                   _characteristicPeerLocation,
                                    _characteristicPeerStatus1UpdatedAt,
                                    _characteristicPeerStatus2UpdatedAt,
                                    _characteristicPeerStatus3UpdatedAt,
@@ -513,11 +478,11 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     // Initialize
     pthread_mutex_init(&_mutex, NULL);
    
-    // Allocate and initialize the peers dictionary. It contains a TSNPeerDescriptor for
+    // Allocate and initialize the peers dictionary. It contains a THEPeerDescriptor for
     // every peer we are either connecting or connected to.
     _peers = [[NSMutableDictionary alloc] init];
     
-    // Allocate and initialize the pending updates array. It contains a TSNCharacteristicUpdateDescriptor
+    // Allocate and initialize the pending updates array. It contains a THECharacteristicUpdateDescriptor
     // for each characteristic update that is pending after a failed call to CBPeripheralManager
     // updateValue:forCharacteristic:onSubscribedCentrals.
     _pendingCharacteristicUpdates = [[NSMutableArray alloc] init];
@@ -562,12 +527,6 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     pthread_mutex_unlock(&_mutex);
 }
 
-// Updates the location.
-- (void)updateLocation:(CLLocation *)location
-{
-    [self updatePeerLocationCharacteristic:location];
-}
-
 // Updates the status. Returns YES if successful; otherwise, NO. A return value of NO
 // indicates that the status string was too long.
 - (BOOL)updateStatus:(NSString *)status
@@ -577,8 +536,8 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 @end
 
-// TSNPeerBluetooth (CBPeripheralManagerDelegate) implementation.
-@implementation TSNPeerBluetooth (CBPeripheralManagerDelegate)
+// THEPeerBluetooth (CBPeripheralManagerDelegate) implementation.
+@implementation THEPeerBluetooth (CBPeripheralManagerDelegate)
 
 // Invoked whenever the peripheral manager's state has been updated.
 - (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheralManager
@@ -610,26 +569,8 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 - (void)peripheralManager:(CBPeripheralManager *)peripheralManager
     didReceiveReadRequest:(CBATTRequest *)request
 {
-    // Peer location characteristic.
-    if ([[[request characteristic] UUID] isEqual:_peerLocationType])
-    {
-        if ([request offset] > 0)
-        {
-            [peripheralManager respondToRequest:request
-                                     withResult:CBATTErrorInvalidOffset];
-        }
-        else
-        {
-            pthread_mutex_lock(&_mutex);
-            CLLocationCoordinate2D locationCoordinate = _peerLocationCoordinate;
-            pthread_mutex_unlock(&_mutex);
-            [request setValue:dataForLocationCoordinate(locationCoordinate)];
-            [peripheralManager respondToRequest:request
-                                     withResult:CBATTErrorSuccess];
-        }
-    }
     // Peer status 1 characteristic.
-    else if ([[[request characteristic] UUID] isEqual:_peerStatus1Type])
+    if ([[[request characteristic] UUID] isEqual:_peerStatus1Type])
     {
         if ([request offset] >= [_peerStatus1Data length])
         {
@@ -715,7 +656,7 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     while ([_pendingCharacteristicUpdates count])
     {
         // Process the next pending characteristic update. If the trasnmission queue is full, stop processing.
-        TSNCharacteristicUpdateDescriptor * characteristicUpdateDescriptor = _pendingCharacteristicUpdates[0];
+        THECharacteristicUpdateDescriptor * characteristicUpdateDescriptor = _pendingCharacteristicUpdates[0];
         if (![_peripheralManager updateValue:[characteristicUpdateDescriptor value]
                            forCharacteristic:[characteristicUpdateDescriptor characteristic]
                         onSubscribedCentrals:nil])
@@ -733,8 +674,8 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
 
 @end
 
-// TSNPeerBluetooth (CBCentralManagerDelegate) implementation.
-@implementation TSNPeerBluetooth (CBCentralManagerDelegate)
+// THEPeerBluetooth (CBCentralManagerDelegate) implementation.
+@implementation THEPeerBluetooth (CBCentralManagerDelegate)
 
 // Invoked whenever the central manager's state has been updated.
 - (void)centralManagerDidUpdateState:(CBCentralManager *)centralManager
@@ -769,9 +710,9 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     // If we're not connected or connecting to this peripheral, connect to it.
     if (!_peers[peripheralIdentifierString])
     {
-        // Add a TSNPeerDescriptor to the peers dictionary.
-        _peers[peripheralIdentifierString] = [[TSNPeerDescriptor alloc] initWithPeripheral:peripheral
-                                                                              initialState:TSNPeerDescriptorStateConnecting];
+        // Add a THEPeerDescriptor to the peers dictionary.
+        _peers[peripheralIdentifierString] = [[THEPeerDescriptor alloc] initWithPeripheral:peripheral
+                                                                              initialState:THEPeerDescriptorStateConnecting];
 
         // Connect to the peripheral.
         [_centralManager connectPeripheral:peripheral
@@ -787,17 +728,17 @@ typedef NS_ENUM(NSUInteger, TSNPeerDescriptorState)
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
     
     // Find the peer descriptor in the peers dictionary. It should be there.
-    TSNPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
+    THEPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
     if (peerDescriptor)
     {
         // Update the peer descriptor state.
-        [peerDescriptor setState:TSNPeerDescriptorStateInitializing];
+        [peerDescriptor setState:THEPeerDescriptorStateInitializing];
     }
     else
     {
         // Allocate a new peer descriptor and add it to the peers dictionary.
-        peerDescriptor = [[TSNPeerDescriptor alloc] initWithPeripheral:peripheral
-                                                          initialState:TSNPeerDescriptorStateInitializing];
+        peerDescriptor = [[THEPeerDescriptor alloc] initWithPeripheral:peripheral
+                                                          initialState:THEPeerDescriptorStateInitializing];
         _peers[peripheralIdentifierString] = peerDescriptor;
     }
     
@@ -826,7 +767,7 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
 
     // Find the peer descriptor.
-    TSNPeerDescriptor * peerDescriptor = [_peers objectForKey:peripheralIdentifierString];
+    THEPeerDescriptor * peerDescriptor = [_peers objectForKey:peripheralIdentifierString];
     if (peerDescriptor)
     {
         // Clear the peer status characteristics.
@@ -848,7 +789,7 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
         
         // Immediately reconnect. This is long-lived. Central manager will connect to this peer whenever it is
         // discovered again.
-        [peerDescriptor setState:TSNPeerDescriptorStateConnecting];
+        [peerDescriptor setState:THEPeerDescriptorStateConnecting];
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
     }
@@ -856,8 +797,8 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
 
 @end
 
-// TSNPeerBluetooth (CBPeripheralDelegate) implementation.
-@implementation TSNPeerBluetooth (CBPeripheralDelegate)
+// THEPeerBluetooth (CBPeripheralDelegate) implementation.
+@implementation THEPeerBluetooth (CBPeripheralDelegate)
 
 // Invoked when services are discovered.
 - (void)peripheral:(CBPeripheral *)peripheral
@@ -871,7 +812,6 @@ didDiscoverServices:(NSError *)error
         {
             [peripheral discoverCharacteristics:@[_peerIDType,
                                                   _peerNameType,
-                                                  _peerLocationType,
                                                   _peerStatus1UpdatedAtType,
                                                   _peerStatus2UpdatedAtType,
                                                   _peerStatus3UpdatedAtType,
@@ -896,7 +836,7 @@ didDiscoverCharacteristicsForService:(CBService *)service
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
     
     // Obtain the peer descriptor.
-    TSNPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
+    THEPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
     if (!peerDescriptor)
     {
         return;
@@ -919,14 +859,6 @@ didDiscoverCharacteristicsForService:(CBService *)service
             {
                 // Read it.
                 [peripheral readValueForCharacteristic:characteristic];
-            }
-            // Peer location characteristic.
-            else if ([[characteristic UUID] isEqual:_peerLocationType])
-            {
-                // Read it and subscribe to it.
-                [peripheral readValueForCharacteristic:characteristic];
-                [peripheral setNotifyValue:YES
-                         forCharacteristic:characteristic];
             }
             // Peer status 1-5 updated at characteristics.
             else if ([[characteristic UUID] isEqual:_peerStatus1UpdatedAtType] ||
@@ -982,7 +914,7 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
 
     // Obtain the peer descriptor.
-    TSNPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
+    THEPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
     if (!peerDescriptor)
     {
         return;
@@ -1000,30 +932,6 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
         // When the peer name is updated, set the peer name in the peer descriptor.
         [peerDescriptor setPeerName:[[NSString alloc] initWithData:[characteristic value]
                                                           encoding:NSUTF8StringEncoding]];
-    }
-    // Peer location characteristic.
-    else if ([[characteristic UUID] isEqual:_peerLocationType])
-    {
-        // When the peer location is updated, set the peer location in the peer descriptor.
-        if ([[characteristic value] length] == sizeof(CLLocationDegrees) * 2)
-        {
-            CLLocationDegrees * latitude = (CLLocationDegrees *)[[characteristic value] bytes];
-            CLLocationDegrees * longitude = latitude + 1;
-            [peerDescriptor setPeerLocation:[[CLLocation alloc] initWithLatitude:*latitude
-                                                                       longitude:*longitude]];
-            
-            // If the peer is fully initialized (it's in the connected state), notify the delegate.
-            if ([peerDescriptor state] == TSNPeerDescriptorStateConnected)
-            {
-                // Notify the delegate.
-                if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didReceivePeerLocation:fromPeerIdentifier:)])
-                {
-                    [[self delegate] peerBluetooth:self
-                            didReceivePeerLocation:[peerDescriptor peerLocation]
-                                fromPeerIdentifier:[peerDescriptor peerID]];
-                }
-            }
-        }
     }
     // Peer status 1 updated at characteristic.
     else if ([[characteristic UUID] isEqual:_peerStatus1UpdatedAtType])
@@ -1066,7 +974,7 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
         if ([[characteristic value] length])
         {
             // If the peer is fully initialized (it's in the connected state), notify the delegate.
-            if ([peerDescriptor state] == TSNPeerDescriptorStateConnected)
+            if ([peerDescriptor state] == THEPeerDescriptorStateConnected)
             {
                 // Notify the delegate.
                 if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didReceivePeerStatus:fromPeerIdentifier:)])
@@ -1081,26 +989,25 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
     }
 
     // Detect when the peer is fully initialized and move it to the connected state.
-    if ([peerDescriptor state] == TSNPeerDescriptorStateInitializing && [peerDescriptor peerID] && [peerDescriptor peerName] && [peerDescriptor peerLocation])
+    if ([peerDescriptor state] == THEPeerDescriptorStateInitializing && [peerDescriptor peerID] && [peerDescriptor peerName])
     {
         // Move the peer to the connected state.
-        [peerDescriptor setState:TSNPeerDescriptorStateConnected];
+        [peerDescriptor setState:THEPeerDescriptorStateConnected];
 
         // Notify the delegate that the peer is connected.
-        if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:peerLocation:)])
+        if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:)])
         {
             [[self delegate] peerBluetooth:self
                   didConnectPeerIdentifier:[peerDescriptor peerID]
-                                  peerName:[peerDescriptor peerName]
-                              peerLocation:[peerDescriptor peerLocation]];
+                                  peerName:[peerDescriptor peerName]];
         }
     }
 }
 
 @end
 
-// TSNPeerBluetooth (Internal) implementation.
-@implementation TSNPeerBluetooth (Internal)
+// THEPeerBluetooth (Internal) implementation.
+@implementation THEPeerBluetooth (Internal)
 
 // Starts advertising.
 - (void)startAdvertising
@@ -1140,26 +1047,6 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
     {
         _scanning = NO;
         [_centralManager stopScan];
-    }
-}
-
-// Updates the peer location characteristic.
-- (void)updatePeerLocationCharacteristic:(CLLocation *)peerLocation
-{
-    // Lock.
-    pthread_mutex_lock(&_mutex);
-
-    // Set the peer location coordinate.
-    _peerLocationCoordinate = [peerLocation coordinate];
-    
-    // Unlock.
-    pthread_mutex_unlock(&_mutex);
-
-    // Update the characteristic value.
-    if (_enabled)
-    {
-        [self updateValue:dataForLocationCoordinate([peerLocation coordinate])
-        forCharacteristic:_characteristicPeerLocation];
     }
 }
 
@@ -1248,7 +1135,7 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
         
         // Enqueue characteristic update descriptor for the failed update. It will be updated when peripheralManagerIsReadyToUpdateSubscribers:
         // is called back.
-        [_pendingCharacteristicUpdates addObject:[[TSNCharacteristicUpdateDescriptor alloc] initWithValue:value
+        [_pendingCharacteristicUpdates addObject:[[THECharacteristicUpdateDescriptor alloc] initWithValue:value
                                                                                            characteristic:characteristic]];
         
         // Unlock.
