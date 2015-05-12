@@ -55,6 +55,7 @@
 // Properties.
 @synthesize window, viewController;
 
+// Class initializer.
 - (id)init
 {
     NSHTTPCookieStorage * cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
