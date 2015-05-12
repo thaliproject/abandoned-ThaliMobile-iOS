@@ -7,3 +7,4 @@ inhibit_all_warnings!
 
 # Targets
 pod 'TSNAtomicFlag'
+pod 'TSNExtensions'

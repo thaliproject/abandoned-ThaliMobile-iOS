@@ -29,6 +29,7 @@
 #include "jx.h"
 #import "JXcore.h"
 #import <TSNAtomicFlag.h>
+#import <TSNThreading.h>
 #import "THEPeerBluetooth.h"
 #import "THEAppContext.h"
 #import "THEPeer.h"
@@ -144,6 +145,11 @@ didConnectPeerIdentifier:(NSUUID *)peerIdentifier
     
     // Unlock.
     pthread_mutex_unlock(&_mutex);
+    
+    OnMainThread(^{
+        [JXcore callEventCallback:@"peerConnected"
+                       withParams:@[[peer identifier], [peer name]]];
+    });
 }
 
 // Notifies the delegate that a peer was disconnected.
@@ -166,6 +172,11 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
     
     // Unlock.
     pthread_mutex_unlock(&_mutex);
+    
+    OnMainThread(^{
+        [JXcore callEventCallback:@"peerConnected"
+                       withParams:@[[peer identifier], [peer name]]];
+    });
 }
 
 // Notifies the delegate that a peer status was received.
