@@ -21,8 +21,6 @@
 // Class initializer.
 - (instancetype)initWithIdentifier:(NSString *)identifier
                               name:(NSString *)name
-                          location:(CLLocation *)location
-                          distance:(CLLocationDistance)distance
 {
     // Initialize superclass.
     self = [super init];
@@ -36,8 +34,6 @@
     // Initialize.
     _identifier = identifier;
     _name = name;
-    _location = location;
-    _disance = distance;
     _lastUpdated = [[NSDate alloc] init];
     
     // Done.
