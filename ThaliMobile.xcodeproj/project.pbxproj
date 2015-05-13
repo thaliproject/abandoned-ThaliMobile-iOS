@@ -54,6 +54,8 @@
 		D3335C7E1B02723D0063A720 /* THEPeer.m in Sources */ = {isa = PBXBuildFile; fileRef = D3335C7D1B02723D0063A720 /* THEPeer.m */; };
 		D3335C821B0278590063A720 /* THEPeerBluetooth.m in Sources */ = {isa = PBXBuildFile; fileRef = D3335C801B0278590063A720 /* THEPeerBluetooth.m */; };
 		D3335C851B027A830063A720 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3335C841B027A830063A720 /* CoreBluetooth.framework */; };
+		D3335C881B03A8A10063A720 /* MultipeerConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3335C871B03A8A10063A720 /* MultipeerConnectivity.framework */; };
+		D3335C8C1B03A9070063A720 /* THEPeerNetworking.m in Sources */ = {isa = PBXBuildFile; fileRef = D3335C8A1B03A9070063A720 /* THEPeerNetworking.m */; };
 		D37EA9701B01378E00650FD9 /* THEAppContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D37EA96D1B01378E00650FD9 /* THEAppContext.m */; };
 		D37EA9711B01378E00650FD9 /* THEAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D37EA96F1B01378E00650FD9 /* THEAppDelegate.m */; };
 		D37EA9771B0137AD00650FD9 /* THEMainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D37EA9731B0137AD00650FD9 /* THEMainViewController.m */; };
@@ -143,6 +145,10 @@
 		D3335C801B0278590063A720 /* THEPeerBluetooth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEPeerBluetooth.m; sourceTree = "<group>"; };
 		D3335C811B0278590063A720 /* THEPeerBluetoothDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEPeerBluetoothDelegate.h; sourceTree = "<group>"; };
 		D3335C841B027A830063A720 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		D3335C871B03A8A10063A720 /* MultipeerConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MultipeerConnectivity.framework; path = System/Library/Frameworks/MultipeerConnectivity.framework; sourceTree = SDKROOT; };
+		D3335C891B03A9070063A720 /* THEPeerNetworking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEPeerNetworking.h; sourceTree = "<group>"; };
+		D3335C8A1B03A9070063A720 /* THEPeerNetworking.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEPeerNetworking.m; sourceTree = "<group>"; };
+		D3335C8B1B03A9070063A720 /* THEPeerNetworkingDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEPeerNetworkingDelegate.h; sourceTree = "<group>"; };
 		D37EA96C1B01378E00650FD9 /* THEAppContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEAppContext.h; sourceTree = "<group>"; };
 		D37EA96D1B01378E00650FD9 /* THEAppContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = THEAppContext.m; sourceTree = "<group>"; };
 		D37EA96E1B01378E00650FD9 /* THEAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = THEAppDelegate.h; sourceTree = "<group>"; };
@@ -165,6 +171,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3335C881B03A8A10063A720 /* MultipeerConnectivity.framework in Frameworks */,
 				D3335C851B027A830063A720 /* CoreBluetooth.framework in Frameworks */,
 				5B1594DD16A7569C00FEF299 /* AssetsLibrary.framework in Frameworks */,
 				301BF552109A68D80062928A /* libCordova.a in Frameworks */,
@@ -206,6 +213,9 @@
 				D3335C811B0278590063A720 /* THEPeerBluetoothDelegate.h */,
 				D37EA9751B0137AD00650FD9 /* THEThaliCore.h */,
 				D37EA9761B0137AD00650FD9 /* THEThaliCore.m */,
+				D3335C891B03A9070063A720 /* THEPeerNetworking.h */,
+				D3335C8A1B03A9070063A720 /* THEPeerNetworking.m */,
+				D3335C8B1B03A9070063A720 /* THEPeerNetworkingDelegate.h */,
 			);
 			name = Classes;
 			path = ThaliMobile/Classes;
@@ -261,6 +271,7 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D3335C871B03A8A10063A720 /* MultipeerConnectivity.framework */,
 				D3335C841B027A830063A720 /* CoreBluetooth.framework */,
 				5B1594DC16A7569C00FEF299 /* AssetsLibrary.framework */,
 				288765FC0DF74451002DB57D /* CoreGraphics.framework */,
@@ -536,6 +547,7 @@
 			files = (
 				D37EA9711B01378E00650FD9 /* THEAppDelegate.m in Sources */,
 				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
+				D3335C8C1B03A9070063A720 /* THEPeerNetworking.m in Sources */,
 				D37EA9701B01378E00650FD9 /* THEAppContext.m in Sources */,
 				D37EA9791B0137AD00650FD9 /* THEThaliCore.m in Sources */,
 				D3335C821B0278590063A720 /* THEPeerBluetooth.m in Sources */,

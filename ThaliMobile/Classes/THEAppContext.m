@@ -31,12 +31,16 @@
 #import <TSNAtomicFlag.h>
 #import <TSNThreading.h>
 #import "THEPeerBluetooth.h"
+#import "THEPeerNetworking.h"
 #import "THEAppContext.h"
 #import "THEPeer.h"
 
-
 // THEAppContext (THEPeerBluetoothDelegate) interface.
 @interface THEAppContext (THEPeerBluetoothDelegate)
+@end
+
+// THEAppContext (THEPeerNetworkingDelegate) interface.
+@interface THEAppContext (THEPeerNetworkingDelegate)
 @end
 
 // THEAppContext (Internal) interface.
@@ -57,6 +61,9 @@
     // Peer Bluetooth.
     THEPeerBluetooth * _peerBluetooth;
     
+    // Peer Networking.
+    THEPeerNetworking * _peerNetworking;
+
     // The mutex used to protect access to things below.
     pthread_mutex_t _mutex;
     
@@ -91,12 +98,14 @@
 // Defines JavaScript extensions.
 - (void)defineJavaScriptExtensions
 {
+    // Start Peer Bluetooth native block.
     [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
         [self startCommunications];
         [JXcore callEventCallback:callbackId
                        withParams:nil];
     } withName:@"StartPeerBluetooth"];
     
+    // Stop Peer Bluetooth native block.
     [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
         [self stopCommunications];
         [JXcore callEventCallback:callbackId
@@ -110,6 +119,7 @@
     if ([_atomicFlagEnabled trySet])
     {
         [_peerBluetooth start];
+        [_peerNetworking start];
     }
 }
 
@@ -119,13 +129,14 @@
     if ([_atomicFlagEnabled tryClear])
     {
         [_peerBluetooth stop];
+        [_peerNetworking stop];
     }
 }
 
 @end
 
-// THEAppContext (TSNPeerBluetoothDelegate) implementation.
-@implementation THEAppContext (TSNPeerBluetoothDelegate)
+// THEAppContext (THEPeerBluetoothDelegate) implementation.
+@implementation THEAppContext (THEPeerBluetoothDelegate)
 
 // Notifies the delegate that a peer was connected.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
@@ -146,6 +157,7 @@ didConnectPeerIdentifier:(NSUUID *)peerIdentifier
     // Unlock.
     pthread_mutex_unlock(&_mutex);
     
+    // Fire the peerConnected event.
     OnMainThread(^{
         [JXcore callEventCallback:@"peerConnected"
                        withParams:@[[peer identifier], [peer name]]];
@@ -173,6 +185,7 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
     // Unlock.
     pthread_mutex_unlock(&_mutex);
     
+    // Fire the peerDisconnected event.
     OnMainThread(^{
         [JXcore callEventCallback:@"peerConnected"
                        withParams:@[[peer identifier], [peer name]]];
@@ -198,6 +211,17 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
     {
         return;
     }
+}
+
+@end
+
+// THEAppContext (THEPeerNetworkingDelegate) implementation.
+@implementation THEAppContext (THEPeerNetworkingDelegate)
+
+// Notifies the delegate that data was received.
+- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
+        didReceiveData:(NSData *)data
+{
 }
 
 @end
@@ -250,6 +274,10 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
                                                     peerIdentifier:peerIdentifier
                                                           peerName:[[UIDevice currentDevice] name]];
     [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
+    
+    // Allocate and initialize peer networking.
+    _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Hello"];
+    [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
     
     // Done.
     return self;
