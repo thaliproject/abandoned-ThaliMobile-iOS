@@ -33,22 +33,22 @@
 const NSUInteger kMaxStatusDataLength = 140 * 4;
 const NSUInteger kMaxPeerNameLength = 100;
 
-// WHPErrorCode enumeration.
-typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
+// THEPeripheralDescriptorState enumeration.
+typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 {
-    THEPeerDescriptorStateDisconnected  = 1,
-    THEPeerDescriptorStateConnecting    = 2,
-    THEPeerDescriptorStateInitializing  = 3,
-    THEPeerDescriptorStateConnected     = 4
+    THEPeripheralDescriptorStateDisconnected  = 1,
+    THEPeripheralDescriptorStateConnecting    = 2,
+    THEPeripheralDescriptorStateInitializing  = 3,
+    THEPeripheralDescriptorStateConnected     = 4
 };
 
-// THEPeerDescriptor interface.
-@interface THEPeerDescriptor : NSObject
+// THEPeripheralDescriptor interface.
+@interface THEPeripheralDescriptor : NSObject
 
 // Properties.
 @property (nonatomic) NSUUID * peerID;
 @property (nonatomic) NSString * peerName;
-@property (nonatomic) THEPeerDescriptorState state;
+@property (nonatomic) THEPeripheralDescriptorState state;
 @property (nonatomic) CBCharacteristic * characteristicPeerStatus1;
 @property (nonatomic) CBCharacteristic * characteristicPeerStatus2;
 @property (nonatomic) CBCharacteristic * characteristicPeerStatus3;
@@ -57,12 +57,12 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
-                      initialState:(THEPeerDescriptorState)initialState;
+                      initialState:(THEPeripheralDescriptorState)initialState;
 
 @end
 
-// THEPeerDescriptor implementation.
-@implementation THEPeerDescriptor
+// THEPeripheralDescriptor implementation.
+@implementation THEPeripheralDescriptor
 {
 @private
     // The peripheral.
@@ -71,7 +71,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 
 // Class initializer.
 - (instancetype)initWithPeripheral:(CBPeripheral *)peripheral
-                      initialState:(THEPeerDescriptorState)initialState
+                      initialState:(THEPeripheralDescriptorState)initialState
 {
     // Initialize superclass.
     self = [super init];
@@ -295,8 +295,8 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     // The peer status 5 data.
     NSData * _peerStatus5Data;
 
-    // The peers dictionary.
-    NSMutableDictionary * _peers;
+    // The perhipherals dictionary.
+    NSMutableDictionary * _peripherals;
     
     // The pending characteristic updates array.
     NSMutableArray * _pendingCharacteristicUpdates;
@@ -478,9 +478,9 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     // Initialize
     pthread_mutex_init(&_mutex, NULL);
    
-    // Allocate and initialize the peers dictionary. It contains a THEPeerDescriptor for
-    // every peer we are either connecting or connected to.
-    _peers = [[NSMutableDictionary alloc] init];
+    // Allocate and initialize the peripherals dictionary. It contains a THEPeripheralDescriptor for
+    // every peripheral we are either connecting or connected to.
+    _peripherals = [[NSMutableDictionary alloc] init];
     
     // Allocate and initialize the pending updates array. It contains a THECharacteristicUpdateDescriptor
     // for each characteristic update that is pending after a failed call to CBPeripheralManager
@@ -707,17 +707,23 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     // Obtain the peripheral identifier string.
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
     
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+
     // If we're not connected or connecting to this peripheral, connect to it.
-    if (!_peers[peripheralIdentifierString])
+    if (!_peripherals[peripheralIdentifierString])
     {
-        // Add a THEPeerDescriptor to the peers dictionary.
-        _peers[peripheralIdentifierString] = [[THEPeerDescriptor alloc] initWithPeripheral:peripheral
-                                                                              initialState:THEPeerDescriptorStateConnecting];
+        // Add a THEPeripheralDescriptor to the peripherals dictionary.
+        _peripherals[peripheralIdentifierString] = [[THEPeripheralDescriptor alloc] initWithPeripheral:peripheral
+                                                                              initialState:THEPeripheralDescriptorStateConnecting];
 
         // Connect to the peripheral.
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
     }
+
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 // Invoked when a peripheral is connected.
@@ -727,24 +733,30 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     // Get the peripheral identifier string.
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
     
-    // Find the peer descriptor in the peers dictionary. It should be there.
-    THEPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
-    if (peerDescriptor)
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+
+    // Find the peripheral descriptor in the peripherals dictionary. It should be there.
+    THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
+    if (peripheralDescriptor)
     {
-        // Update the peer descriptor state.
-        [peerDescriptor setState:THEPeerDescriptorStateInitializing];
+        // Update the peripheral descriptor state.
+        [peripheralDescriptor setState:THEPeripheralDescriptorStateInitializing];
     }
     else
     {
-        // Allocate a new peer descriptor and add it to the peers dictionary.
-        peerDescriptor = [[THEPeerDescriptor alloc] initWithPeripheral:peripheral
-                                                          initialState:THEPeerDescriptorStateInitializing];
-        _peers[peripheralIdentifierString] = peerDescriptor;
+        // Allocate a new peripheral descriptor and add it to the peripherals dictionary.
+        peripheralDescriptor = [[THEPeripheralDescriptor alloc] initWithPeripheral:peripheral
+                                                          initialState:THEPeripheralDescriptorStateInitializing];
+        _peripherals[peripheralIdentifierString] = peripheralDescriptor;
     }
     
     // Set our delegate on the peripheral and discover its services.
     [peripheral setDelegate:(id<CBPeripheralDelegate>)self];
     [peripheral discoverServices:@[_serviceType]];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 // Invoked when a peripheral connection fails.
@@ -766,33 +778,39 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
     // Get the peripheral identifier string.
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
 
-    // Find the peer descriptor.
-    THEPeerDescriptor * peerDescriptor = [_peers objectForKey:peripheralIdentifierString];
-    if (peerDescriptor)
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+
+    // Find the peripheral descriptor.
+    THEPeripheralDescriptor * peripheralDescriptor = [_peripherals objectForKey:peripheralIdentifierString];
+    if (peripheralDescriptor)
     {
         // Clear the peer status characteristics.
-        [peerDescriptor setCharacteristicPeerStatus1:nil];
-        [peerDescriptor setCharacteristicPeerStatus2:nil];
-        [peerDescriptor setCharacteristicPeerStatus3:nil];
-        [peerDescriptor setCharacteristicPeerStatus4:nil];
-        [peerDescriptor setCharacteristicPeerStatus5:nil];
+        [peripheralDescriptor setCharacteristicPeerStatus1:nil];
+        [peripheralDescriptor setCharacteristicPeerStatus2:nil];
+        [peripheralDescriptor setCharacteristicPeerStatus3:nil];
+        [peripheralDescriptor setCharacteristicPeerStatus4:nil];
+        [peripheralDescriptor setCharacteristicPeerStatus5:nil];
 
         // Notify the delegate.
-        if ([peerDescriptor peerName])
+        if ([peripheralDescriptor peerName])
         {
             if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didDisconnectPeerIdentifier:)])
             {
                 [[self delegate] peerBluetooth:self
-                   didDisconnectPeerIdentifier:[peerDescriptor peerID]];
+                   didDisconnectPeerIdentifier:[peripheralDescriptor peerID]];
             }
         }
         
         // Immediately reconnect. This is long-lived. Central manager will connect to this peer whenever it is
         // discovered again.
-        [peerDescriptor setState:THEPeerDescriptorStateConnecting];
+        [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
         [_centralManager connectPeripheral:peripheral
                                    options:nil];
     }
+
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 @end
@@ -835,74 +853,78 @@ didDiscoverCharacteristicsForService:(CBService *)service
     // Get the peripheral identifier string.
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
     
-    // Obtain the peer descriptor.
-    THEPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
-    if (!peerDescriptor)
-    {
-        return;
-    }
+    // Lock.
+    pthread_mutex_lock(&_mutex);
     
-    // If this is our service, process its discovered characteristics.
-    if ([[service UUID] isEqual:_serviceType])
+    // Obtain the peripheral descriptor.
+    THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
+    if (peripheralDescriptor)
     {
-        // Process each of the discovered characteristics.
-        for (CBCharacteristic * characteristic in [service characteristics])
+        // If this is our service, process its discovered characteristics.
+        if ([[service UUID] isEqual:_serviceType])
         {
-            // Peer ID characteristic.
-            if ([[characteristic UUID] isEqual:_peerIDType])
+            // Process each of the discovered characteristics.
+            for (CBCharacteristic * characteristic in [service characteristics])
             {
-                // Read it.
-                [peripheral readValueForCharacteristic:characteristic];
-            }
-            // Peer name characteristic.
-            else if ([[characteristic UUID] isEqual:_peerNameType])
-            {
-                // Read it.
-                [peripheral readValueForCharacteristic:characteristic];
-            }
-            // Peer status 1-5 updated at characteristics.
-            else if ([[characteristic UUID] isEqual:_peerStatus1UpdatedAtType] ||
-                     [[characteristic UUID] isEqual:_peerStatus2UpdatedAtType] ||
-                     [[characteristic UUID] isEqual:_peerStatus3UpdatedAtType] ||
-                     [[characteristic UUID] isEqual:_peerStatus4UpdatedAtType] ||
-                     [[characteristic UUID] isEqual:_peerStatus5UpdatedAtType])
-            {
-                // Subscribe to it.
-                [peripheral setNotifyValue:YES
-                         forCharacteristic:characteristic];
-            }
-            // Peer status 1 characteristics.
-            else if ([[characteristic UUID] isEqual:_peerStatus1Type])
-            {
-                // Remember it so we can read it.
-                [peerDescriptor setCharacteristicPeerStatus1:characteristic];
-            }
-            // Peer status 2 characteristics.
-            else if ([[characteristic UUID] isEqual:_peerStatus2Type])
-            {
-                // Remember it so we can read it.
-                [peerDescriptor setCharacteristicPeerStatus2:characteristic];
-            }
-            // Peer status 3 characteristics.
-            else if ([[characteristic UUID] isEqual:_peerStatus3Type])
-            {
-                // Remember it so we can read it.
-                [peerDescriptor setCharacteristicPeerStatus3:characteristic];
-            }
-            // Peer status 4 characteristics.
-            else if ([[characteristic UUID] isEqual:_peerStatus4Type])
-            {
-                // Remember it so we can read it.
-                [peerDescriptor setCharacteristicPeerStatus4:characteristic];
-            }
-            // Peer status 5 characteristics.
-            else if ([[characteristic UUID] isEqual:_peerStatus5Type])
-            {
-                // Remember it so we can read it.
-                [peerDescriptor setCharacteristicPeerStatus5:characteristic];
+                // Peer ID characteristic.
+                if ([[characteristic UUID] isEqual:_peerIDType])
+                {
+                    // Read it.
+                    [peripheral readValueForCharacteristic:characteristic];
+                }
+                // Peer name characteristic.
+                else if ([[characteristic UUID] isEqual:_peerNameType])
+                {
+                    // Read it.
+                    [peripheral readValueForCharacteristic:characteristic];
+                }
+                // Peer status 1-5 updated at characteristics.
+                else if ([[characteristic UUID] isEqual:_peerStatus1UpdatedAtType] ||
+                         [[characteristic UUID] isEqual:_peerStatus2UpdatedAtType] ||
+                         [[characteristic UUID] isEqual:_peerStatus3UpdatedAtType] ||
+                         [[characteristic UUID] isEqual:_peerStatus4UpdatedAtType] ||
+                         [[characteristic UUID] isEqual:_peerStatus5UpdatedAtType])
+                {
+                    // Subscribe to it.
+                    [peripheral setNotifyValue:YES
+                             forCharacteristic:characteristic];
+                }
+                // Peer status 1 characteristics.
+                else if ([[characteristic UUID] isEqual:_peerStatus1Type])
+                {
+                    // Remember it so we can read it.
+                    [peripheralDescriptor setCharacteristicPeerStatus1:characteristic];
+                }
+                // Peer status 2 characteristics.
+                else if ([[characteristic UUID] isEqual:_peerStatus2Type])
+                {
+                    // Remember it so we can read it.
+                    [peripheralDescriptor setCharacteristicPeerStatus2:characteristic];
+                }
+                // Peer status 3 characteristics.
+                else if ([[characteristic UUID] isEqual:_peerStatus3Type])
+                {
+                    // Remember it so we can read it.
+                    [peripheralDescriptor setCharacteristicPeerStatus3:characteristic];
+                }
+                // Peer status 4 characteristics.
+                else if ([[characteristic UUID] isEqual:_peerStatus4Type])
+                {
+                    // Remember it so we can read it.
+                    [peripheralDescriptor setCharacteristicPeerStatus4:characteristic];
+                }
+                // Peer status 5 characteristics.
+                else if ([[characteristic UUID] isEqual:_peerStatus5Type])
+                {
+                    // Remember it so we can read it.
+                    [peripheralDescriptor setCharacteristicPeerStatus5:characteristic];
+                }
             }
         }
     }
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 // Invoked when the value of a characteristic is updated.
@@ -913,95 +935,99 @@ didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
     // Get the peripheral identifier string.
     NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
 
-    // Obtain the peer descriptor.
-    THEPeerDescriptor * peerDescriptor = _peers[peripheralIdentifierString];
-    if (!peerDescriptor)
-    {
-        return;
-    }
+    // Lock.
+    pthread_mutex_lock(&_mutex);
 
-    // Peer ID characteristic.
-    if ([[characteristic UUID] isEqual:_peerIDType])
+    // Obtain the peripheral descriptor.
+    THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
+    if (peripheralDescriptor)
     {
-        // When the peer ID is updated, set the peer ID in the peer descriptor.
-        [peerDescriptor setPeerID:[[NSUUID alloc] initWithUUIDBytes:[[characteristic value] bytes]]];
-    }
-    // Peer name characteristic.
-    else if ([[characteristic UUID] isEqual:_peerNameType])
-    {
-        // When the peer name is updated, set the peer name in the peer descriptor.
-        [peerDescriptor setPeerName:[[NSString alloc] initWithData:[characteristic value]
-                                                          encoding:NSUTF8StringEncoding]];
-    }
-    // Peer status 1 updated at characteristic.
-    else if ([[characteristic UUID] isEqual:_peerStatus1UpdatedAtType])
-    {
-        // Read the peer status 1 characteristic.
-        [peripheral readValueForCharacteristic:[peerDescriptor characteristicPeerStatus1]];
-    }
-    // Peer status 2 updated at characteristic.
-    else if ([[characteristic UUID] isEqual:_peerStatus2UpdatedAtType])
-    {
-        // Read the peer status 2 characteristic.
-        [peripheral readValueForCharacteristic:[peerDescriptor characteristicPeerStatus2]];
-    }
-    // Peer status 3 updated at characteristic.
-    else if ([[characteristic UUID] isEqual:_peerStatus3UpdatedAtType])
-    {
-        // Read the peer status 3 characteristic.
-        [peripheral readValueForCharacteristic:[peerDescriptor characteristicPeerStatus3]];
-    }
-    // Peer status 4 updated at characteristic.
-    else if ([[characteristic UUID] isEqual:_peerStatus4UpdatedAtType])
-    {
-        // Read the peer status 4 characteristic.
-        [peripheral readValueForCharacteristic:[peerDescriptor characteristicPeerStatus4]];
-    }
-    // Peer status 5 updated at characteristic.
-    else if ([[characteristic UUID] isEqual:_peerStatus5UpdatedAtType])
-    {
-        // Read the peer status 5 characteristic.
-        [peripheral readValueForCharacteristic:[peerDescriptor characteristicPeerStatus5]];
-    }
-    // Peer status 1-5 characteristic.
-    else if ([[characteristic UUID] isEqual:_peerStatus1Type] ||
-             [[characteristic UUID] isEqual:_peerStatus2Type] ||
-             [[characteristic UUID] isEqual:_peerStatus3Type] ||
-             [[characteristic UUID] isEqual:_peerStatus4Type] ||
-             [[characteristic UUID] isEqual:_peerStatus5Type])
-    {
-        // If there was a value, process it.
-        if ([[characteristic value] length])
+        // Peer ID characteristic.
+        if ([[characteristic UUID] isEqual:_peerIDType])
         {
-            // If the peer is fully initialized (it's in the connected state), notify the delegate.
-            if ([peerDescriptor state] == THEPeerDescriptorStateConnected)
+            // When the peer ID is updated, set the peer ID in the peripheral descriptor.
+            [peripheralDescriptor setPeerID:[[NSUUID alloc] initWithUUIDBytes:[[characteristic value] bytes]]];
+        }
+        // Peer name characteristic.
+        else if ([[characteristic UUID] isEqual:_peerNameType])
+        {
+            // When the peer name is updated, set the peer name in the peripheral descriptor.
+            [peripheralDescriptor setPeerName:[[NSString alloc] initWithData:[characteristic value]
+                                                                    encoding:NSUTF8StringEncoding]];
+        }
+        // Peer status 1 updated at characteristic.
+        else if ([[characteristic UUID] isEqual:_peerStatus1UpdatedAtType])
+        {
+            // Read the peer status 1 characteristic.
+            [peripheral readValueForCharacteristic:[peripheralDescriptor characteristicPeerStatus1]];
+        }
+        // Peer status 2 updated at characteristic.
+        else if ([[characteristic UUID] isEqual:_peerStatus2UpdatedAtType])
+        {
+            // Read the peer status 2 characteristic.
+            [peripheral readValueForCharacteristic:[peripheralDescriptor characteristicPeerStatus2]];
+        }
+        // Peer status 3 updated at characteristic.
+        else if ([[characteristic UUID] isEqual:_peerStatus3UpdatedAtType])
+        {
+            // Read the peer status 3 characteristic.
+            [peripheral readValueForCharacteristic:[peripheralDescriptor characteristicPeerStatus3]];
+        }
+        // Peer status 4 updated at characteristic.
+        else if ([[characteristic UUID] isEqual:_peerStatus4UpdatedAtType])
+        {
+            // Read the peer status 4 characteristic.
+            [peripheral readValueForCharacteristic:[peripheralDescriptor characteristicPeerStatus4]];
+        }
+        // Peer status 5 updated at characteristic.
+        else if ([[characteristic UUID] isEqual:_peerStatus5UpdatedAtType])
+        {
+            // Read the peer status 5 characteristic.
+            [peripheral readValueForCharacteristic:[peripheralDescriptor characteristicPeerStatus5]];
+        }
+        // Peer status 1-5 characteristic.
+        else if ([[characteristic UUID] isEqual:_peerStatus1Type] ||
+                 [[characteristic UUID] isEqual:_peerStatus2Type] ||
+                 [[characteristic UUID] isEqual:_peerStatus3Type] ||
+                 [[characteristic UUID] isEqual:_peerStatus4Type] ||
+                 [[characteristic UUID] isEqual:_peerStatus5Type])
+        {
+            // If there was a value, process it.
+            if ([[characteristic value] length])
             {
-                // Notify the delegate.
-                if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didReceivePeerStatus:fromPeerIdentifier:)])
+                // If the peer is fully initialized (it's in the connected state), notify the delegate.
+                if ([peripheralDescriptor state] == THEPeripheralDescriptorStateConnected)
                 {
-                    [[self delegate] peerBluetooth:self
-                              didReceivePeerStatus:[[NSString alloc] initWithData:[characteristic value]
-                                                                         encoding:NSUTF8StringEncoding]
-                                fromPeerIdentifier:[peerDescriptor peerID]];
+                    // Notify the delegate.
+                    if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didReceivePeerStatus:fromPeerIdentifier:)])
+                    {
+                        [[self delegate] peerBluetooth:self
+                                  didReceivePeerStatus:[[NSString alloc] initWithData:[characteristic value]
+                                                                             encoding:NSUTF8StringEncoding]
+                                    fromPeerIdentifier:[peripheralDescriptor peerID]];
+                    }
                 }
+            }
+        }
+        
+        // Detect when the peer is fully initialized and move it to the connected state.
+        if ([peripheralDescriptor state] == THEPeripheralDescriptorStateInitializing && [peripheralDescriptor peerID] && [peripheralDescriptor peerName])
+        {
+            // Move the peer to the connected state.
+            [peripheralDescriptor setState:THEPeripheralDescriptorStateConnected];
+            
+            // Notify the delegate that the peer is connected.
+            if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:)])
+            {
+                [[self delegate] peerBluetooth:self
+                      didConnectPeerIdentifier:[peripheralDescriptor peerID]
+                                      peerName:[peripheralDescriptor peerName]];
             }
         }
     }
 
-    // Detect when the peer is fully initialized and move it to the connected state.
-    if ([peerDescriptor state] == THEPeerDescriptorStateInitializing && [peerDescriptor peerID] && [peerDescriptor peerName])
-    {
-        // Move the peer to the connected state.
-        [peerDescriptor setState:THEPeerDescriptorStateConnected];
-
-        // Notify the delegate that the peer is connected.
-        if ([[self delegate] respondsToSelector:@selector(peerBluetooth:didConnectPeerIdentifier:peerName:)])
-        {
-            [[self delegate] peerBluetooth:self
-                  didConnectPeerIdentifier:[peerDescriptor peerID]
-                                  peerName:[peerDescriptor peerName]];
-        }
-    }
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 @end

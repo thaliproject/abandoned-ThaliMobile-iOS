@@ -13,8 +13,13 @@
 @protocol THEPeerNetworkingDelegate <NSObject>
 @required
 
-// Notifies the delegate that data was received.
-- (void)peerNetworking:(THEPeerNetworking *)peerNetworking
-        didReceiveData:(NSData *)data;
+// Notifies the delegate that a peer was found.
+- (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
+ didFindPeerIdentifier:(NSUUID *)peerIdentifier
+              peerName:(NSString *)peerName;
+
+// Notifies the delegate that a peer was lost.
+- (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
+ didLosePeerIdentifier:(NSUUID *)peerIdentifier;
 
 @end

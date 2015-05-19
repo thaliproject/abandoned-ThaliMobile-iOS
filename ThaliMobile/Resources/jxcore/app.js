@@ -7,14 +7,9 @@
   // Log that the app.js file was loaded.
   logInCordova('ThaliMobile app.js registering functions');
 
-  // Register peerConnected callback.
-  cordova('peerConnected').registerToNative(function(peerID, peerName) {
-    logInCordova('************************** peerConnected called from native');
-  });
-
-  // Register peerDisconnected callback.
-  cordova('peerDisconnected').registerToNative(function(peerID, peerName) {
-    logInCordova('************************** peerDisconnected called from native.');
+  // Register peerAvailabilityChanged callback.
+  cordova('peerAvailabilityChanged').registerToNative(function(peerID, peerName, connectionPossible) {
+    logInCordova('************************** peerAvailabilityChanged called from native');
   });
 
   // Log that the app.js file was loaded.
@@ -25,9 +20,6 @@
     logInCordova('Peer Bluetooth started');
   });
   
- 
- 
- 
  
 
 //  cordova('StartPeerBluetoothCommunications').callNative(function () {

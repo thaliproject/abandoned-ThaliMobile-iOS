@@ -41,6 +41,8 @@ didConnectPeerIdentifier:(NSUUID *)peerIdentifier
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
 didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier;
 
+@optional
+
 // Notifies the delegate that a peer status was received.
 - (void)peerBluetooth:(THEPeerBluetooth *)peerBluetooth
  didReceivePeerStatus:(NSString *)peerStatus

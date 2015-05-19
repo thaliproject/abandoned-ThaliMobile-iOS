@@ -13,12 +13,12 @@
 @interface THEPeer : NSObject
 
 // Properties.
-@property (nonatomic, readonly) NSString * identifier;
+@property (nonatomic, readonly) NSUUID * identifier;
 @property (nonatomic, readonly) NSString * name;
-@property (atomic) NSDate * lastUpdated;
+@property (nonatomic) BOOL connectionPossible;
 
 // Class initializer.
-- (instancetype)initWithIdentifier:(NSString *)peerIdentifier
+- (instancetype)initWithIdentifier:(NSUUID *)peerIdentifier
                               name:(NSString *)name;
 
 @end

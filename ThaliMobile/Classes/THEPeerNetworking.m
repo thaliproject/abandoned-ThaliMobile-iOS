@@ -25,11 +25,60 @@
 //  THEPeerNetworking.m
 //
 
+#import <pthread.h>
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
 
 // Static declarations.
 static NSString * const PEER_ID_KEY     = @"ThaliPeerID";
+static NSString * const PEER_IDENTIFIER = @"PeerIdentifier";
+static NSString * const PEER_NAME       = @"PeerName";
+
+// THEPeerDescriptor interface.
+@interface THEPeerDescriptor : NSObject
+
+// Properties.
+@property (nonatomic) MCPeerID * peerID;
+@property (nonatomic) NSUUID * peerIdentifier;
+@property (nonatomic) NSString * peerName;
+
+// Class initializer.
+- (instancetype)initWithPeerID:(MCPeerID *)peerId
+                peerIdentifier:(NSUUID *)peerIdentifier
+                      peerName:(NSString *)peerName;
+
+@end
+
+// THEPeerDescriptor implementation.
+@implementation THEPeerDescriptor
+{
+@private
+}
+
+// Class initializer.
+- (instancetype)initWithPeerID:(MCPeerID *)peerID
+                peerIdentifier:(NSUUID *)peerIdentifier
+                      peerName:(NSString *)peerName
+{
+    // Initialize superclass.
+    self = [super init];
+    
+    // Handle errors.
+    if (!self)
+    {
+        return nil;
+    }
+    
+    // Initialize.
+    _peerID = peerID;
+    _peerIdentifier = peerIdentifier;
+    _peerName = peerName;
+    
+    // Done.
+    return self;
+}
+
+@end
 
 // THEPeerNetworking (MCNearbyServiceAdvertiserDelegate) interface.
 @interface THEPeerNetworking (MCNearbyServiceAdvertiserDelegate) <MCNearbyServiceAdvertiserDelegate>
@@ -55,6 +104,12 @@ static NSString * const PEER_ID_KEY     = @"ThaliPeerID";
     // The service type.
     NSString * _serviceType;
     
+    // The peer identifier.
+    NSUUID * _peerIdentifier;
+    
+    // The peer name.
+    NSString * _peerName;
+    
     // The peer ID.
     MCPeerID * _peerID;
     
@@ -66,10 +121,18 @@ static NSString * const PEER_ID_KEY     = @"ThaliPeerID";
     
     // The nearby service browser.
     MCNearbyServiceBrowser * _nearbyServiceBrowser;
+    
+    // Mutex used to synchronize accesss to the things below.
+    pthread_mutex_t _mutex;
+
+    // The peers dictionary.
+    NSMutableDictionary * _peers;
 }
 
 // Class initializer.
 - (instancetype)initWithServiceType:(NSString *)serviceType
+                     peerIdentifier:(NSUUID *)peerIdentifier
+                           peerName:(NSString *)peerName
 {
     // Initialize superclass.
     self = [super init];
@@ -82,6 +145,15 @@ static NSString * const PEER_ID_KEY     = @"ThaliPeerID";
     
     // Initialize.
     _serviceType = serviceType;
+    _peerIdentifier = peerIdentifier;
+    _peerName = peerName;
+    
+    // Initialize
+    pthread_mutex_init(&_mutex, NULL);
+    
+    // Allocate and initialize the peers dictionary. It contains a THEPeerDescriptor for
+    // every peer we are aware of.
+    _peers = [[NSMutableDictionary alloc] init];
 
     // Done.
     return self;
@@ -120,7 +192,8 @@ static NSString * const PEER_ID_KEY     = @"ThaliPeerID";
     
     // Allocate and initialize the nearby service advertizer.
     _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] initWithPeer:_peerID
-                                                                 discoveryInfo:nil
+                                                                 discoveryInfo:@{PEER_IDENTIFIER:   [_peerIdentifier UUIDString],
+                                                                                 PEER_NAME:         _peerName}
                                                                    serviceType:_serviceType];
     [_nearbyServiceAdvertiser setDelegate:(id<MCNearbyServiceAdvertiserDelegate>)self];
     
@@ -192,31 +265,67 @@ didNotStartAdvertisingPeer:(NSError *)error
       foundPeer:(MCPeerID *)peerID
 withDiscoveryInfo:(NSDictionary *)info
 {
-    // If it's not this local peer, invite the peer to the session.
-    if (![[_peerID displayName] isEqualToString:[peerID displayName]])
-    {
-        // Log.
-        NSLog(@"%@ was found", [peerID displayName]);
-        
-        // Invite the peer to the session.
-        [_nearbyServiceBrowser invitePeer:peerID
-                                toSession:_session
-                              withContext:nil
-                                  timeout:30];
-        
-        // Log.
-        NSLog(@"%@ invited", [peerID displayName]);
-    }
+    // Lock.
+    pthread_mutex_lock(&_mutex);
     
+    THEPeerDescriptor * peerDescriptor = [[THEPeerDescriptor alloc]initWithPeerID:peerID
+                                                                   peerIdentifier:[[NSUUID alloc] initWithUUIDString:info[PEER_IDENTIFIER]]
+                                                                         peerName:info[PEER_NAME]];
+    
+    _peers[peerID] = peerDescriptor;
+
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    if ([[self delegate] respondsToSelector:@selector(peerNetworking:didFindPeerIdentifier:peerName:)])
+    {
+        [[self delegate] peerNetworking:self
+                  didFindPeerIdentifier:[peerDescriptor peerIdentifier]
+                               peerName:[peerDescriptor peerName]];
+    }
+
+    
+//    // If it's not this local peer, invite the peer to the session.
+//    if (![[_peerID displayName] isEqualToString:[peerID displayName]])
+//    {
+//        // Log.
+//        NSLog(@"%@ was found", [peerID displayName]);
+//        
+//        // Invite the peer to the session.
+//        [_nearbyServiceBrowser invitePeer:peerID
+//                                toSession:_session
+//                              withContext:nil
+//                                  timeout:30];
+//        
+//        // Log.
+//        NSLog(@"%@ invited", [peerID displayName]);
+//    }
 }
 
 // Notifies the delegate that a peer was lost.
 - (void)browser:(MCNearbyServiceBrowser *)browser
        lostPeer:(MCPeerID *)peerID
 {
-    if (![[_peerID displayName] isEqualToString:[peerID displayName]])
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    THEPeerDescriptor * peerDescriptor = _peers[peerID];
+
+    if (!peerDescriptor)
     {
-        NSLog(@"%@ was lost", [peerID displayName]);
+        pthread_mutex_unlock(&_mutex);
+        return;
+    }
+    
+    [_peers removeObjectForKey:peerID];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    if ([[self delegate] respondsToSelector:@selector(peerNetworking:didLosePeerIdentifier:)])
+    {
+        [[self delegate] peerNetworking:self
+                  didLosePeerIdentifier:[peerDescriptor peerIdentifier]];
     }
 }
 
@@ -240,11 +349,11 @@ didNotStartBrowsingForPeers:(NSError *)error
     // Log.
     NSLog(@"%@ sent %lu bytes", [peerID displayName], [data length]);
     
-    // Notify.
-    if ([[self delegate] respondsToSelector:@selector(peerNetworking:didReceiveData:)])
-    {
-        [[self delegate] peerNetworking:self didReceiveData:data];
-    }
+//    // Notify.
+//    if ([[self delegate] respondsToSelector:@selector(peerNetworking:didReceiveData:)])
+//    {
+//        [[self delegate] peerNetworking:self didReceiveData:data];
+//    }
 }
 
 // Notifies the delegate that the local peer started receiving a resource from a nearby peer.

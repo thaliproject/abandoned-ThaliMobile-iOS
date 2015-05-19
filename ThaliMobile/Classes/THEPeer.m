@@ -19,7 +19,7 @@
 }
 
 // Class initializer.
-- (instancetype)initWithIdentifier:(NSString *)identifier
+- (instancetype)initWithIdentifier:(NSUUID *)identifier
                               name:(NSString *)name
 {
     // Initialize superclass.
@@ -34,7 +34,6 @@
     // Initialize.
     _identifier = identifier;
     _name = name;
-    _lastUpdated = [[NSDate alloc] init];
     
     // Done.
     return self;
