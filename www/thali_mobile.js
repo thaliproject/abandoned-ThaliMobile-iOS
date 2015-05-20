@@ -27,13 +27,13 @@
 
 (function () {
   // Logs in Cordova.
-  function logInCordova(x) {
-    var logging = document.getElementById('logEntries');
-    if (logging) {
+  function logInCordova(logEntry) {
+    var logEntriesDiv = document.getElementById('logEntries');
+    if (logEntriesDiv) {
       var logEntryDiv = document.createElement('div');
       logEntryDiv.className = 'logEntry';
-      logEntryDiv.innerHTML = x;
-      logging.appendChild(logEntryDiv);
+      logEntryDiv.innerHTML = logEntry;
+      logEntriesDiv.appendChild(logEntryDiv);
     }
   }
 
