@@ -344,6 +344,10 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 // Invoked whenever the peripheral manager's state has been updated.
 - (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheralManager
 {
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+
+    // Process the state update.
     if ([_peripheralManager state] == CBPeripheralManagerStatePoweredOn)
     {
         [self startAdvertising];
@@ -352,6 +356,9 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
     {
         [self stopAdvertising];
     }
+
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 // Invoked with the result of a startAdvertising call.
@@ -485,10 +492,25 @@ typedef NS_ENUM(NSUInteger, THEPeripheralDescriptorState)
 didFailToConnectPeripheral:(CBPeripheral *)peripheral
                  error:(NSError *)error
 {
-    // Immediately reconnect. This is long-lived meaning that we will connect to this peer whenever it is
-    // encountered again.
-    [_centralManager connectPeripheral:peripheral
-                               options:nil];
+    // Get the peripheral identifier string.
+    NSString * peripheralIdentifierString = [[peripheral identifier] UUIDString];
+    
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // Find the peripheral descriptor in the peripherals dictionary. It should be there.
+    THEPeripheralDescriptor * peripheralDescriptor = _peripherals[peripheralIdentifierString];
+    if (peripheralDescriptor)
+    {
+        // Immediately reconnect. This is long-lived meaning that we will connect to this peer whenever it is
+        // encountered again.
+        [peripheralDescriptor setState:THEPeripheralDescriptorStateConnecting];
+        [_centralManager connectPeripheral:peripheral
+                                   options:nil];
+    }
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 // Invoked when a peripheral is disconnected.
@@ -502,7 +524,7 @@ didDisconnectPeripheral:(CBPeripheral *)peripheral
     // Lock.
     pthread_mutex_lock(&_mutex);
 
-    // Find the peripheral descriptor.
+    // Find the peripheral descriptor in the peripherals dictionary. It should be there.
     THEPeripheralDescriptor * peripheralDescriptor = [_peripherals objectForKey:peripheralIdentifierString];
     if (peripheralDescriptor)
     {
