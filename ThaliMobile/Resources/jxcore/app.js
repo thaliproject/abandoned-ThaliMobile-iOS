@@ -8,11 +8,14 @@
   logInCordova('ThaliMobile app.js registering functions');
 
   // Register peerAvailabilityChanged callback.
-  cordova('peerAvailabilityChanged').registerToNative(function(peerID, peerName, connectionPossible) {
-    logInCordova('************************** peerAvailabilityChanged called from native');
+  cordova('peerAvailabilityChanged').registerToNative(function(callback, args) {
+    logInCordova('peerAvailabilityChanged called');
+    logInCordova('peerID is ' + args[0]);
+    logInCordova('peerName is ' + args[1]);
+    logInCordova('connectionPossible is ' + args[2]);
+    logInCordova('[end]');
   });
  
-
   // Log that the app.js file was loaded.
   logInCordova('ThaliMobile app.js loaded');
 

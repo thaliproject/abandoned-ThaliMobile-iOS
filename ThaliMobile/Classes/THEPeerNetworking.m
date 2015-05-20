@@ -238,21 +238,14 @@ didReceiveInvitationFromPeer:(MCPeerID *)peerID
        withContext:(NSData *)context
  invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
-    // Log.
-    NSLog(@"%@ sent invitation", [peerID displayName]);
-    
     // Accept the invitation.
     invitationHandler(YES, _session);
-    
-    // Log.
-    NSLog(@"%@ invitation accepted", [peerID displayName]);
 }
 
 // Notifies the delegate that advertisement failed.
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser
 didNotStartAdvertisingPeer:(NSError *)error
 {
-    NSLog(@"%@ did not start advertising: %@", [_peerID displayName], [error localizedDescription]);
 }
 
 @end
@@ -283,23 +276,6 @@ withDiscoveryInfo:(NSDictionary *)info
                   didFindPeerIdentifier:[peerDescriptor peerIdentifier]
                                peerName:[peerDescriptor peerName]];
     }
-
-    
-//    // If it's not this local peer, invite the peer to the session.
-//    if (![[_peerID displayName] isEqualToString:[peerID displayName]])
-//    {
-//        // Log.
-//        NSLog(@"%@ was found", [peerID displayName]);
-//        
-//        // Invite the peer to the session.
-//        [_nearbyServiceBrowser invitePeer:peerID
-//                                toSession:_session
-//                              withContext:nil
-//                                  timeout:30];
-//        
-//        // Log.
-//        NSLog(@"%@ invited", [peerID displayName]);
-//    }
 }
 
 // Notifies the delegate that a peer was lost.
@@ -333,7 +309,6 @@ withDiscoveryInfo:(NSDictionary *)info
 - (void)browser:(MCNearbyServiceBrowser *)browser
 didNotStartBrowsingForPeers:(NSError *)error
 {
-    NSLog(@"%@ did not start browsing for peers: %@", [_peerID displayName], [error localizedDescription]);
 }
 
 @end
@@ -346,14 +321,6 @@ didNotStartBrowsingForPeers:(NSError *)error
  didReceiveData:(NSData *)data
        fromPeer:(MCPeerID *)peerID
 {
-    // Log.
-    NSLog(@"%@ sent %lu bytes", [peerID displayName], (unsigned long)[data length]);
-    
-//    // Notify.
-//    if ([[self delegate] respondsToSelector:@selector(peerNetworking:didReceiveData:)])
-//    {
-//        [[self delegate] peerNetworking:self didReceiveData:data];
-//    }
 }
 
 // Notifies the delegate that the local peer started receiving a resource from a nearby peer.
@@ -362,7 +329,6 @@ didStartReceivingResourceWithName:(NSString *)resourceName
        fromPeer:(MCPeerID *)peerID
    withProgress:(NSProgress *)progress
 {
-    NSLog(@"%@ started sending %@", [peerID displayName], resourceName);
 }
 
 // Notifies the delegate that the local peer finished receiving a resource from a nearby peer.
@@ -372,7 +338,6 @@ didFinishReceivingResourceWithName:(NSString *)resourceName
           atURL:(NSURL *)localURL
       withError:(NSError *)error
 {
-    NSLog(@"%@ finished sending %@ [%@]", [peerID displayName], resourceName, localURL);
 }
 
 // Notifies the delegate that the local peer received a stream from a nearby peer.
@@ -381,7 +346,6 @@ didReceiveStream:(NSInputStream *)stream
        withName:(NSString *)streamName
        fromPeer:(MCPeerID *)peerID
 {
-    NSLog(@"%@ sent stream %@", [peerID displayName], streamName);
 }
 
 // Notifies the delegate that the state of a nearby peer changed.
@@ -390,30 +354,16 @@ didReceiveStream:(NSInputStream *)stream
  didChangeState:(MCSessionState)state
 {
     // Log.
-    NSString * stateValue;
     switch (state)
     {
         case MCSessionStateNotConnected:
-            stateValue = @"not connected";
             break;
             
         case MCSessionStateConnecting:
-            stateValue = @"connecting";
             break;
             
         case MCSessionStateConnected:
-            stateValue = @"connected";
             break;
-    }
-    NSLog(@"%@ %@", [peerID displayName], stateValue);
-    NSArray * connectedPeers = [_session connectedPeers];
-    NSLog(@"------------ %lu Connected Peers ------------", (unsigned long)[connectedPeers count]);
-    for (MCPeerID * connectedPeerID in [_session connectedPeers])
-    {
-        if (![[connectedPeerID displayName] isEqualToString:[_peerID displayName]])
-        {
-            NSLog(@"    %@ connected", [connectedPeerID displayName]);
-        }
     }
 }
 
@@ -423,11 +373,7 @@ didReceiveCertificate:(NSArray *)certificate
        fromPeer:(MCPeerID *)peerID
 certificateHandler:(void (^)(BOOL accept))certificateHandler
 {
-    NSLog(@"%@ sent certificate",  [peerID displayName]);
-    
     certificateHandler(YES);
-    
-    NSLog(@"%@ certificate accepted",  [peerID displayName]);
 }
 
 @end

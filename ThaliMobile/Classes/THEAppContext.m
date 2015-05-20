@@ -165,7 +165,7 @@ didConnectPeerIdentifier:(NSUUID *)peerIdentifier
         [JXcore callEventCallback:@"peerAvailabilityChanged"
                        withParams:@[[[peer identifier] UUIDString],
                                     [peer name],
-                                    @"NO"]];
+                                    @(false)]];
     });
 
     // Unlock.
@@ -193,26 +193,28 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
     
     // Find the peer.
     THEPeer * peer = [_peers objectForKey:peerIdentifier];
+    
+    // If this is a new peer, add it.
     if (!peer)
     {
         // Allocate and initialize the peer, add it to the peers dictionary.
         peer = [[THEPeer alloc] initWithIdentifier:peerIdentifier
                                               name:peerName];
-        [_peers setObject:peer forKey:peerIdentifier];
+        [_peers setObject:peer
+                   forKey:peerIdentifier];
     }
     
     // Set the connection possible flag.
     [peer setConnectionPossible:YES];
 
+    // Fire the peerAvailabilityChanged event.
+    [JXcore callEventCallback:@"peerAvailabilityChanged"
+                   withParams:@[[[peer identifier] UUIDString],
+                                [peer name],
+                                @(true)]];
+
     // Unlock.
     pthread_mutex_unlock(&_mutex);
-    
-    OnMainThread(^{
-        [JXcore callEventCallback:@"peerAvailabilityChanged"
-                       withParams:@[[[peer identifier] UUIDString],
-                                    [peer name],
-                                    @"YES"]];
-    });
 }
 
 // Notifies the delegate that a peer was lost.
@@ -224,24 +226,20 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
     
     // Find the peer.
     THEPeer * peer = _peers[peerIdentifier];
-    
-    // If we couldn't find the peer, ignore the event.
-    if (!peer)
+    if (peer)
     {
-        pthread_mutex_unlock(&_mutex);
-        return;
+        // Clear the connection possible flag.
+        [peer setConnectionPossible:NO];
+
+        // Fire the peerAvailabilityChanged event.
+        [JXcore callEventCallback:@"peerAvailabilityChanged"
+                       withParams:@[[[peer identifier] UUIDString],
+                                    [peer name],
+                                    @(false)]];
     }
     
     // Unlock.
     pthread_mutex_unlock(&_mutex);
-    
-    // Fire the peerUnavailable event.
-    OnMainThread(^{
-        [JXcore callEventCallback:@"peerAvailabilityChanged"
-                       withParams:@[[[peer identifier] UUIDString],
-                                    [peer name],
-                                    @"NO"]];
-    });
 }
 
 @end
