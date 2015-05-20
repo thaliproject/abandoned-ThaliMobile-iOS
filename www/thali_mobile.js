@@ -26,7 +26,7 @@
 //
 
 (function () {
-  // Log in Cordova.
+  // Logs in Cordova.
   function logInCordova(x) {
     var logging = document.getElementById('logEntries');
     if (logging) {
@@ -36,23 +36,6 @@
       logging.appendChild(logEntryDiv);
     }
   }
-
-  function jxcore_ready() {
- 
-    
- 
-    // calling a method from JXcore (app.js)
-    jxcore('asyncPing').call('Hello', function (ret, err) {
-      // register getTime method from jxcore (app.js)
-      var getBuffer = jxcore("getBuffer");
-
-      getBuffer.call(function (bf, err) {
-        var arr = new Uint8Array(bf);
-        logInCordova("Buffer size:" + arr.length + " - first item: " + arr[0]);
-      });
-    });
-  }
-
 
   var jxcoreLoadedInterval = setInterval(function () {
     // HACK Repeat until jxcore is defined. 
@@ -68,15 +51,14 @@
       // Log that JXcore is ready.
       logInCordova('JXcore ready');
 
+      // Register logging function.
       jxcore('logInCordova').register(logInCordova);
-                   
-      logInCordova('Loading ThaliMobile app.js');
+
+      // Load app.js.
       jxcore('app.js').loadMainFile(function (ret, err) {
         if (err) {
-          alert("Error!!!" + err);
-        } else {
-          logInCordova('Loaded');
-          jxcore_ready();
+          alert('Error loading ThaliMobile app.js');
+          alert(err);
         }
       });
     });

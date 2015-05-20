@@ -103,14 +103,14 @@
         [self startCommunications];
         [JXcore callEventCallback:callbackId
                        withParams:nil];
-    } withName:@"StartPeerBluetooth"];
+    } withName:@"StartPeerCommunications"];
     
     // Stop Peer Bluetooth native block.
     [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
         [self stopCommunications];
         [JXcore callEventCallback:callbackId
                        withParams:nil];
-    } withName:@"StopPeerBluetooth"];
+    } withName:@"StopPeerCommunications"];
 }
 
 // Starts communications.
