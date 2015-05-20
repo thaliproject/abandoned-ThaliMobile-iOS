@@ -45,8 +45,4 @@
 // Stops peer Bluetooth.
 - (void)stop;
 
-// Updates the status. Returns YES if successful; otherwise, NO. A return value of NO
-// indicates that the status string was too long.
-- (BOOL)updateStatus:(NSString *)status;
-
 @end
