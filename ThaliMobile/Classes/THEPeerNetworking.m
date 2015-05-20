@@ -109,7 +109,7 @@ static NSString * const PEER_NAME       = @"PeerName";
     
     // The peer name.
     NSString * _peerName;
-    
+
     // The peer ID.
     MCPeerID * _peerID;
     
@@ -347,7 +347,7 @@ didNotStartBrowsingForPeers:(NSError *)error
        fromPeer:(MCPeerID *)peerID
 {
     // Log.
-    NSLog(@"%@ sent %lu bytes", [peerID displayName], [data length]);
+    NSLog(@"%@ sent %lu bytes", [peerID displayName], (unsigned long)[data length]);
     
 //    // Notify.
 //    if ([[self delegate] respondsToSelector:@selector(peerNetworking:didReceiveData:)])
@@ -407,7 +407,7 @@ didReceiveStream:(NSInputStream *)stream
     }
     NSLog(@"%@ %@", [peerID displayName], stateValue);
     NSArray * connectedPeers = [_session connectedPeers];
-    NSLog(@"------------ %lu Connected Peers ------------", [connectedPeers count]);
+    NSLog(@"------------ %lu Connected Peers ------------", (unsigned long)[connectedPeers count]);
     for (MCPeerID * connectedPeerID in [_session connectedPeers])
     {
         if (![[connectedPeerID displayName] isEqualToString:[_peerID displayName]])
