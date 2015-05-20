@@ -37,13 +37,14 @@
     }
   }
 
+  // Find out when JXcore is loaded.
   var jxcoreLoadedInterval = setInterval(function () {
-    // HACK Repeat until jxcore is defined. 
+    // HACK Repeat until jxcore is defined. When it is, it's loaded.
     if (typeof jxcore == 'undefined') {
       return;
     }
 
-    // Stop interval.
+    // JXcore is loaded. Stop interval.
     clearInterval(jxcoreLoadedInterval);
 
     // Set the ready function.
