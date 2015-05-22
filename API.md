@@ -4,6 +4,7 @@ This document contains information about Thali API's.
 ---
 
 ## Native API's Exposed to JavaScript Code
+The following section contains Native API's that are exposed to JavaScript code.
 
 ---
 `StartPeerCommunications(peerIdentifier, peerName)`
