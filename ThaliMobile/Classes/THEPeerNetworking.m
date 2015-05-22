@@ -34,6 +34,16 @@ static NSString * const PEER_ID_KEY     = @"ThaliPeerID";
 static NSString * const PEER_IDENTIFIER = @"PeerIdentifier";
 static NSString * const PEER_NAME       = @"PeerName";
 
+// THEPeerDescriptorState enumeration.
+typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
+{
+    THEPeerDescriptorStateFound         = 1,
+    THEPeerDescriptorStateLost          = 2,
+    THEPeerDescriptorStateInvited       = 3,
+    THEPeerDescriptorStateConnecting    = 4,
+    THEPeerDescriptorStateConnected     = 5
+};
+
 // THEPeerDescriptor interface.
 @interface THEPeerDescriptor : NSObject
 
@@ -41,11 +51,13 @@ static NSString * const PEER_NAME       = @"PeerName";
 @property (nonatomic) MCPeerID * peerID;
 @property (nonatomic) NSUUID * peerIdentifier;
 @property (nonatomic) NSString * peerName;
+@property (nonatomic) THEPeerDescriptorState state;
 
 // Class initializer.
-- (instancetype)initWithPeerID:(MCPeerID *)peerId
+- (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
-                      peerName:(NSString *)peerName;
+                      peerName:(NSString *)peerName
+                  initialState:(THEPeerDescriptorState)initialState;
 
 @end
 
@@ -59,6 +71,7 @@ static NSString * const PEER_NAME       = @"PeerName";
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
                       peerName:(NSString *)peerName
+                  initialState:(THEPeerDescriptorState)initialState
 {
     // Initialize superclass.
     self = [super init];
@@ -73,6 +86,7 @@ static NSString * const PEER_NAME       = @"PeerName";
     _peerID = peerID;
     _peerIdentifier = peerIdentifier;
     _peerName = peerName;
+    _state = initialState;
     
     // Done.
     return self;
@@ -227,6 +241,49 @@ static NSString * const PEER_NAME       = @"PeerName";
     _peerID = nil;
 }
 
+// Connects to the peer with the specified peer identifier.
+- (BOOL)connectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier
+{
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+
+    // See if we have a peer descriptor matching the peer identifier.
+    NSArray * peers = [_peers allValues];
+    THEPeerDescriptor * peerDescriptor = nil;
+    for (int i = 0; !peerDescriptor && i < [peers count]; i++)
+    {
+        THEPeerDescriptor * peerDescriptorToCheck = (THEPeerDescriptor *)peers[i];
+        if ([peerIdentifier isEqual:[peerDescriptorToCheck peerIdentifier]])
+        {
+            peerDescriptor = peerDescriptorToCheck;
+        }
+    }
+    
+    // If we found a peer descriptor matching the peer identifier, invite the peer.
+    if (peerDescriptor)
+    {
+        // Invite the peer to the session.
+        [peerDescriptor setState:THEPeerDescriptorStateInvited];
+        [_nearbyServiceBrowser invitePeer:[peerDescriptor peerID]
+                                toSession:_session
+                              withContext:nil
+                                  timeout:30];
+    }
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    // Done.    
+    return peerDescriptor != nil;
+}
+
+// Connects from the peer with the specified peer identifier.
+- (BOOL)disconnectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier
+{
+ 
+    return YES;
+}
+
 @end
 
 // THEPeerNetworking (MCNearbyServiceAdvertiserDelegate) implementation.
@@ -261,15 +318,24 @@ withDiscoveryInfo:(NSDictionary *)info
     // Lock.
     pthread_mutex_lock(&_mutex);
     
-    THEPeerDescriptor * peerDescriptor = [[THEPeerDescriptor alloc]initWithPeerID:peerID
-                                                                   peerIdentifier:[[NSUUID alloc] initWithUUIDString:info[PEER_IDENTIFIER]]
-                                                                         peerName:info[PEER_NAME]];
-    
-    _peers[peerID] = peerDescriptor;
+    // Find the peer descriptor.
+    THEPeerDescriptor * peerDescriptor = (THEPeerDescriptor *)_peers[peerID];
+
+    // Process the event. If this is the first time we've discovered this peer, add it.
+    if (!peerDescriptor)
+    {
+        peerDescriptor = [[THEPeerDescriptor alloc]initWithPeerID:peerID
+                                                   peerIdentifier:[[NSUUID alloc] initWithUUIDString:info[PEER_IDENTIFIER]]
+                                                         peerName:info[PEER_NAME]
+                                                     initialState:THEPeerDescriptorStateFound];
+        
+        _peers[peerID] = peerDescriptor;
+    }
 
     // Unlock.
     pthread_mutex_unlock(&_mutex);
     
+    // Notify the delegate.
     if ([[self delegate] respondsToSelector:@selector(peerNetworking:didFindPeerIdentifier:peerName:)])
     {
         [[self delegate] peerNetworking:self
@@ -285,23 +351,27 @@ withDiscoveryInfo:(NSDictionary *)info
     // Lock.
     pthread_mutex_lock(&_mutex);
     
-    THEPeerDescriptor * peerDescriptor = _peers[peerID];
+    // Find the peer descriptor.
+    THEPeerDescriptor * peerDescriptor = (THEPeerDescriptor *)_peers[peerID];
 
-    if (!peerDescriptor)
+    // If we have seen this peer, process the event.
+    if (peerDescriptor)
     {
-        pthread_mutex_unlock(&_mutex);
-        return;
+        // Clear the connectable flag.
+        [peerDescriptor setState:THEPeerDescriptorStateLost];
     }
-    
-    [_peers removeObjectForKey:peerID];
     
     // Unlock.
     pthread_mutex_unlock(&_mutex);
     
-    if ([[self delegate] respondsToSelector:@selector(peerNetworking:didLosePeerIdentifier:)])
+    // Notify the delegate.
+    if (peerDescriptor)
     {
-        [[self delegate] peerNetworking:self
-                  didLosePeerIdentifier:[peerDescriptor peerIdentifier]];
+        if ([[self delegate] respondsToSelector:@selector(peerNetworking:didLosePeerIdentifier:)])
+        {
+            [[self delegate] peerNetworking:self
+                      didLosePeerIdentifier:[peerDescriptor peerIdentifier]];
+        }
     }
 }
 
@@ -353,18 +423,34 @@ didReceiveStream:(NSInputStream *)stream
            peer:(MCPeerID *)peerID
  didChangeState:(MCSessionState)state
 {
-    // Log.
-    switch (state)
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+
+    // Find the peer descriptor.
+    THEPeerDescriptor * peerDescriptor = (THEPeerDescriptor *)_peers[peerID];
+    
+    // If we found the peer descriptor, process the event.
+    if (peerDescriptor)
     {
-        case MCSessionStateNotConnected:
-            break;
-            
-        case MCSessionStateConnecting:
-            break;
-            
-        case MCSessionStateConnected:
-            break;
+        // Log.
+        switch (state)
+        {
+            case MCSessionStateNotConnected:
+                [peerDescriptor setState:THEPeerDescriptorStateFound];
+                break;
+                
+            case MCSessionStateConnecting:
+                [peerDescriptor setState:THEPeerDescriptorStateConnecting];
+                break;
+                
+            case MCSessionStateConnected:
+                [peerDescriptor setState:THEPeerDescriptorStateConnected];
+                break;
+        }
     }
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 // Notifies the delegate to validate the client certificate provided by a nearby peer when a connection is first established.

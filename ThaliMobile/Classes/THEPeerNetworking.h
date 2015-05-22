@@ -26,4 +26,10 @@
 // Stops peer networking.
 - (void)stop;
 
+// Connects to the peer with the specified peer identifier.
+- (BOOL)connectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+
+// Connects from the peer with the specified peer identifier.
+- (BOOL)disconnectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+
 @end

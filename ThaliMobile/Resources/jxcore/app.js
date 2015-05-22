@@ -1,4 +1,7 @@
 (function () {
+  // Peers that we know about.
+  var peers = {};
+
   // Logs in Cordova.
   function logInCordova(text) {
     cordova('logInCordova').call(text);
@@ -6,13 +9,38 @@
 
   // Log that the app.js file was loaded.
   logInCordova('ThaliMobile app.js registering functions');
-
-  // Register peerAvailabilityChanged callback.
-  cordova('peerAvailabilityChanged').registerToNative(function(callback, args) {
+    
+  cordova('networkChanged').registerToNative(function (callback, args) {
     logInCordova(callback + ' called');
-    logInCordova('peerID is ' + args[0]);
-    logInCordova('peerName is ' + args[1]);
-    logInCordova('connectionPossible is ' + args[2]);
+    var network = args[0];
+    logInCordova(JSON.stringify(network));
+    
+    if (network.isReachable) {
+      logInCordova('****** NETWORK REACHABLE!!!');
+    }                    
+  });
+    
+  // Register peerChanged callback.
+  cordova('peerChanged').registerToNative(function (callback, args) {
+    logInCordova(callback + ' called');
+             
+    var peer = args[0];                             
+                                                                                    
+    logInCordova(JSON.stringify(peer));
+    logInCordova('peerIdentifier is ' + peer.peerIdentifier);
+    logInCordova('peerName is ' + peer.peerName);
+    logInCordova('state is ' + peer.state);
+    
+    // Set the peer.
+    peers[peer.peerIdentifier] = peer;
+                                                      
+//    // Start peer communications.
+//    if (false) {
+//      cordova('ConnectPeer').callNative(peer.peerIdentifier, function (result) {
+//        logInCordova('ConnectPeer return code was ' + result);
+//      });      
+//    }
+
   });
  
   // Log that the app.js file was loaded.

@@ -6,6 +6,12 @@
 // project.
 
 
+// NPReachability
+#define COCOAPODS_POD_AVAILABLE_NPReachability
+#define COCOAPODS_VERSION_MAJOR_NPReachability 0
+#define COCOAPODS_VERSION_MINOR_NPReachability 2
+#define COCOAPODS_VERSION_PATCH_NPReachability 0
+
 // TSNAtomicFlag
 #define COCOAPODS_POD_AVAILABLE_TSNAtomicFlag
 #define COCOAPODS_VERSION_MAJOR_TSNAtomicFlag 1

@@ -1,12 +1,15 @@
 PODS:
+  - NPReachability (0.2.0)
   - TSNAtomicFlag (1.0)
   - TSNExtensions (1.0.5)
 
 DEPENDENCIES:
+  - NPReachability
   - TSNAtomicFlag
   - TSNExtensions
 
 SPEC CHECKSUMS:
+  NPReachability: a6d51e365bc4d277be2c9c9b6bdf1f0dcba99eea
   TSNAtomicFlag: b7d664aa2c49beaa4510a87e09e8b93f1cfea532
   TSNExtensions: cf0a9d30be0f8be43d9d6a9fd99806ef4407e318
 
