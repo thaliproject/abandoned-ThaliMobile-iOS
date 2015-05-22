@@ -104,6 +104,7 @@ below.
 ---
 
 ## JavaScript Callbacks Called from Native Code
+The following section contains JaavScript callbacks that are called by native code.
 
 ---
 `networkChanged(network)`
