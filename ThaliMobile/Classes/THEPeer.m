@@ -66,7 +66,7 @@
             break;
     }
     
-    return [NSString stringWithFormat:@"{ \"peerIdentifier\": \"%@\", \"peerName\": \"%@\", \"state\": \"%@\" }",
+    return [NSString stringWithFormat:@"[ { \"peerIdentifier\": \"%@\", \"peerName\": \"%@\", \"state\": \"%@\" } ]",
             [[self identifier] UUIDString],
             [self name],
             state];

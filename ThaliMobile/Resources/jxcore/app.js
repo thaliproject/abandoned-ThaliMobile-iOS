@@ -1,6 +1,6 @@
 (function () {
   // Peers that we know about.
-  var peers = {};
+  var _peers = {};
 
   // Logs in Cordova.
   function logInCordova(text) {
@@ -23,17 +23,20 @@
   // Register peerChanged callback.
   cordova('peerChanged').registerToNative(function (callback, args) {
     logInCordova(callback + ' called');
+    var peers = args[0];
              
-    var peer = args[0];                             
-                                                                                    
-    logInCordova(JSON.stringify(peer));
-    logInCordova('peerIdentifier is ' + peer.peerIdentifier);
-    logInCordova('peerName is ' + peer.peerName);
-    logInCordova('state is ' + peer.state);
-    
-    // Set the peer.
-    peers[peer.peerIdentifier] = peer;
-                                                      
+    for (var i = 0; i < peers.length; i++) {
+      var peer = peers[i];
+
+      logInCordova(JSON.stringify(peer));
+      logInCordova('peerIdentifier is ' + peer.peerIdentifier);
+      logInCordova('peerName is ' + peer.peerName);
+      logInCordova('state is ' + peer.state);
+      
+      // Set the peer.
+      _peers[peer.peerIdentifier] = peer;
+    }                             
+                                                                                                                                          
 //    // Start peer communications.
 //    if (false) {
 //      cordova('ConnectPeer').callNative(peer.peerIdentifier, function (result) {
