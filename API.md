@@ -203,3 +203,6 @@ application.
 On some systems, `peerChanged` will be called immediately when the state of a peer 
 changes. On other systems, there may be a significant period of time between
 `peerChanged` callbacks.
+
+---
+End of document.
