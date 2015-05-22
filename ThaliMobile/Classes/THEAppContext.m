@@ -425,6 +425,7 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent
 {
+    // Construct the JSON for the networkChanged event.
     NSString * json;
     if ([[NPReachability sharedInstance] isCurrentlyReachable])
     {
@@ -437,7 +438,7 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
         json = @"{ \"isReachable\": false }";
     }
 
-    // Fire the peerChanged event.
+    // Fire the networkChanged event.
     OnMainThread(^{
         [JXcore callEventCallback:@"networkChanged"
                          withJSON:json];
