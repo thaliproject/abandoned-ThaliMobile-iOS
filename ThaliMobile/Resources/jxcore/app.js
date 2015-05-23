@@ -10,7 +10,7 @@
     cordova('logInCordova').call(text);
   };
   
-  // Get the device name.
+  // Gets the device name.
   function getDeviceName() {
     var deviceNameResult;
     cordova('GetDeviceName').callNative(function (deviceName) {
@@ -20,13 +20,12 @@
     return deviceNameResult;
   };
   
+  // Gets the peer identifier.
   function getPeerIdentifier() {
-    // Get the peer identifier.
     var peerIdentifier;
     cordova('GetKeyValue').callNative(_peerIdentifierKey, function (value) {
       peerIdentifier = value;
       if (peerIdentifier == undefined) {
-        // Make and set the peer idetifier.
         cordova('MakeGUID').callNative(function (guid) {
           peerIdentifier = guid;
           cordova('SetKeyValue').callNative(_peerIdentifierKey, guid, function (response) {
@@ -37,17 +36,26 @@
         });
       }
     });
-    
     return peerIdentifier;    
   };
+  
+  // Starts peer communications.
+  function startPeerCommunications(peerIdentifier, peerName) {
+    var result;
+    cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, function (value) {
+      result = Boolean(value);
+    });
+    return result;
+  };
 
+  // Stops peer communications.
+  function stopPeerCommunications(peerIdentifier, peerName) {
+    cordova('StopPeerCommunications').callNative(function () {});
+  };
+  
   // Log that the app.js file was loaded.
   logInCordova('ThaliMobile app.js registering functions');
-  
-  var peerName = getDeviceName();
-  var peerIdentifier = getPeerIdentifier();
-  
-
+    
   cordova('networkChanged').registerToNative(function (callback, args) {
     logInCordova(callback + ' called');
     var network = args[0];
@@ -87,10 +95,14 @@
   // Log that the app.js file was loaded.
   logInCordova('ThaliMobile app.js loaded');
 
+  var peerIdentifier = getPeerIdentifier();
+  var peerName = getDeviceName();
+  
   // Start peer communications.
-  cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, function () {
-    logInCordova('Peer communications started');
-  });
+  startPeerCommunications(peerIdentifier, peerName);
+//  cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, function () {
+//    logInCordova('Peer communications started');
+//  });
  
   cordova('getBuffer').registerSync(function () {
     console.log("getBuffer is called!!!");
