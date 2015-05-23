@@ -111,7 +111,9 @@ it is used for debugging and trans purposes.
 
 *Returns:*
 
-None. 
+`boolean`  
+`true` if successfull; otherwise, `false`.
+
 
 *Notes:* 
 
