@@ -52,16 +52,6 @@ void registerJavaScriptFunction2(JXValue *params, int argc)
     JX_MakePersistent(javaScriptFunction2);
 }
 
-void startCommunications(JXValue *params, int argc)
-{
-    [[THEAppContext singleton] startCommunications];
-}
-
-void stopCommunications(JXValue *params, int argc)
-{
-    [[THEAppContext singleton] stopCommunications];
-}
-
 void nativeFunction1(JXResult * results, int argc)
 {
     NSLog(@"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
@@ -138,8 +128,6 @@ void nativeFunction2(JXResult * results, int argc)
     // Define native methods extensions.
     JX_DefineExtension("registerJavaScriptFunction1", registerJavaScriptFunction1);
     JX_DefineExtension("registerJavaScriptFunction2", registerJavaScriptFunction2);
-    JX_DefineExtension("startCommunications", startCommunications);
-    JX_DefineExtension("stopCommunications", stopCommunications);
     JX_DefineExtension("nativeFunction1", nativeFunction1);
     JX_DefineExtension("nativeFunction2", nativeFunction2);
 }

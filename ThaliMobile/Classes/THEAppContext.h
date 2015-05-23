@@ -37,7 +37,8 @@
 - (void)defineJavaScriptExtensions;
 
 // Starts communications.
-- (void)startCommunications;
+- (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
+                                     peerName:(NSString *)peerName;
 
 // Stops communications.
 - (void)stopCommunications;

@@ -105,11 +105,65 @@
 // Defines JavaScript extensions.
 - (void)defineJavaScriptExtensions
 {
+    // GetDeviceName native block.
+    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
+        [JXcore callEventCallback:callbackId
+                       withParams:@[[[UIDevice currentDevice] name]]];
+    } withName:@"GetDeviceName"];
+    
+    // MakeGUID native block.
+    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
+        [JXcore callEventCallback:callbackId
+                       withParams:@[[[NSUUID UUID] UUIDString]]];
+    } withName:@"MakeGUID"];
+
+    // GetKeyValue native block.
+    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
+        if ([params count] != 2 || ![params[0] isKindOfClass:[NSString class]])
+        {
+            [JXcore callEventCallback:callbackId
+                             withParams:@[]];
+        }
+        else
+        {
+            NSString * value = [[NSUserDefaults standardUserDefaults] stringForKey:params[0]];
+            [JXcore callEventCallback:callbackId
+                           withParams:value ? @[value] : @[]];
+        }
+    } withName:@"GetKeyValue"];
+    
+    // SetKeyValue native block.
+    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
+        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
+        {
+            [JXcore callEventCallback:callbackId
+                           withParams:@[]];
+        }
+        else
+        {
+            NSUserDefaults * userDefaults = [NSUserDefaults standardUserDefaults];
+            [userDefaults setObject:params[1]
+                             forKey:params[0]];
+            [userDefaults synchronize];
+            [JXcore callEventCallback:callbackId
+                           withParams:@[params[1]]];
+        }
+    } withName:@"SetKeyValue"];
+    
     // StartPeerCommunications native block.
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
-        [self startCommunications];
-        [JXcore callEventCallback:callbackId
-                       withParams:nil];
+        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
+        {
+            [JXcore callEventCallback:callbackId
+                           withParams:@[@(false)]];
+        }
+        else
+        {
+            [self startCommunicationsWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:params[0]]
+                                               peerName:params[1]];
+            [JXcore callEventCallback:callbackId
+                           withParams:nil];
+        }
     } withName:@"StartPeerCommunications"];
     
     // StopPeerCommunications native block.
@@ -150,10 +204,26 @@
 }
 
 // Starts communications.
-- (void)startCommunications
+- (void)startCommunicationsWithPeerIdentifier:(NSUUID *)peerIdentifier
+                                     peerName:(NSString *)peerName
 {
     if ([_atomicFlagCommunicationsEnabled trySet])
     {
+        // Allocate and initialize the service type.
+        NSUUID * serviceType = [[NSUUID alloc] initWithUUIDString:@"72D83A8B-9BE7-474B-8D2E-556653063A5B"];
+
+        // Allocate and initialize the peer Bluetooth context.
+        _peerBluetooth = [[THEPeerBluetooth alloc] initWithServiceType:serviceType
+                                                        peerIdentifier:peerIdentifier
+                                                              peerName:peerName];
+        [_peerBluetooth setDelegate:(id<THEPeerBluetoothDelegate>)self];
+        
+        // Allocate and initialize peer networking.
+        _peerNetworking = [[THEPeerNetworking alloc] initWithServiceType:@"Thali"
+                                                          peerIdentifier:peerIdentifier
+                                                                peerName:peerName];
+        [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
+
         [_peerBluetooth start];
         [_peerNetworking start];
         
@@ -173,8 +243,10 @@
     {
         [_peerBluetooth stop];
         [_peerNetworking stop];
-        
-        // Remove reachbility handler.
+        [_peerBluetooth setDelegate:nil];
+        [_peerNetworking setDelegate:nil];
+        _peerBluetooth = nil;
+        _peerNetworking = nil;
         [[NPReachability sharedInstance] removeHandler:reachabilityHandlerReference];
         reachabilityHandlerReference = nil;
     }

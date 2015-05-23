@@ -1,4 +1,7 @@
 (function () {
+  
+  var _peerIdentifierKey = 'PeerIdentifier';
+  
   // Peers that we know about.
   var _peers = {};
 
@@ -6,10 +9,45 @@
   function logInCordova(text) {
     cordova('logInCordova').call(text);
   };
+  
+  // Get the device name.
+  function getDeviceName() {
+    var deviceNameResult;
+    cordova('GetDeviceName').callNative(function (deviceName) {
+      logInCordova('GetDeviceName return was ' + deviceName);
+      deviceNameResult = deviceName;
+    });      
+    return deviceNameResult;
+  };
+  
+  function getPeerIdentifier() {
+    // Get the peer identifier.
+    var peerIdentifier;
+    cordova('GetKeyValue').callNative(_peerIdentifierKey, function (value) {
+      peerIdentifier = value;
+      if (peerIdentifier == undefined) {
+        // Make and set the peer idetifier.
+        cordova('MakeGUID').callNative(function (guid) {
+          peerIdentifier = guid;
+          cordova('SetKeyValue').callNative(_peerIdentifierKey, guid, function (response) {
+            if (!response.result) {
+              alert('Failed to save the peer identifier');
+            }
+          });
+        });
+      }
+    });
+    
+    return peerIdentifier;    
+  };
 
   // Log that the app.js file was loaded.
   logInCordova('ThaliMobile app.js registering functions');
-    
+  
+  var peerName = getDeviceName();
+  var peerIdentifier = getPeerIdentifier();
+  
+
   cordova('networkChanged').registerToNative(function (callback, args) {
     logInCordova(callback + ' called');
     var network = args[0];
@@ -50,7 +88,7 @@
   logInCordova('ThaliMobile app.js loaded');
 
   // Start peer communications.
-  cordova('StartPeerCommunications').callNative(function () {
+  cordova('StartPeerCommunications').callNative(peerIdentifier, peerName, function () {
     logInCordova('Peer communications started');
   });
  

@@ -7,6 +7,91 @@ This document contains information about Thali API's.
 The following section contains Native API's that are exposed to JavaScript code.
 
 ---
+`GetDeviceName()`
+
+*Description:*
+
+Gets the device name.
+
+*Params:* 
+
+None.
+
+*Returns:*
+
+`string`  
+The device name.
+
+*Notes:*
+
+On iOS, this returns `[[UIDevice currentDevice] name]`.
+
+---
+`MakeGUID()`
+
+*Description:*
+
+Returns a new GUID.
+
+*Params:* 
+
+None.
+
+*Returns:*
+
+`string`  
+The new GUID.
+
+*Notes:*
+
+On iOS, this returns `[[NSUUID UUID] UUIDString]`.
+
+---
+`GetKeyValue(key)`
+
+*Description:*
+
+Gets the value of the specified key.
+
+*Params:* 
+
+`key`  
+`string` - The key to get.
+
+*Returns:*
+
+`string`  
+The key value, if successful; otherwise, `undefined`.
+
+*Notes:*
+
+None.
+
+---
+`SetKeyValue(key, value)`
+
+*Description:*
+
+Sets the value of the specified key.
+
+*Params:* 
+
+`key`
+`string` - The key to set.
+
+`value`
+`string` - The value for the key.
+
+*Returns:*
+
+`string`  
+The key value, if successful; otherwise, `undefined`.
+
+*Notes:*
+
+None.
+
+---
 `StartPeerCommunications(peerIdentifier, peerName)`
 
 *Description:*
@@ -16,10 +101,13 @@ Starts peer communications.
 *Params:* 
 
 `peerIdentifier`  
-`string` - Specifies the peer identifier.
+`string` - Specifies the peer identifier. This `peerIdentifier` must be a valid GUID in string
+format.
+>Example: BEEFCAFE-BEEF-CAFE-BEEF-CAFEBEEFCAFE
 
 `peerName`  
-`string` - Specifies the peer identifier.
+`string` - Specifies the peer name. The `peerName` should be a short name describing the peer.
+it is used for debugging and trans purposes.
 
 *Returns:*
 
