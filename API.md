@@ -257,22 +257,33 @@ Each `peer` object contains the following properties:
 >>Valid states are:
 >>
 >>`Unavailable`  
->>The peer is unavailable. (Calling ConnectPeer will fail.)
+>>The peer is unavailable. Calling `BeginConnectPeer` will fail.
 >>
 >>`Available`  
->>The peer is available. (Calling ConnectPeer may succeed.)
+>>The peer is available. Calling `BeginConnectPeer` may succeed.
 >>
 >>`Connecting`  
->>After a call to ConnectPeer, the state will change to Connecting while the
->>connection is being established. It will then  change to Connected, if the
->>connection was successfully established. If the connection could not be
->> established, the state will change to either Unavailable or Available the next
->> time peerChanged is called, depending on the peer's availability.
+>>After a successful call to `BeginConnectPeer`, the state will change to `Connecting` while
+>>the connection is being established. The state will then  change to `Connected`, if the
+>>connection was successfully established. If the connection could not be established, the
+>>state will change to `ConnectFailed`, and then to either `Unavailable` or `Available`,
+>>depending on the peer's availability.
 >>
 >>`Connected`  
->>After a call to ConnectPeer, the state will change to Connected.
+>>After a call to `BeginConnectPeer`, the state will change to `Connected`, if a connection was
+>>successfully established.
+>>
+>>`ConnectFailed`  
+>>After a call to `BeginConnectPeer`, the state will change to `ConnectFailed`, if a connection
+>>could not be established. Immediately following this, the state will change to either `Unavailable`
+>>or `Available`, depending on the peer's availability 
+>>
+>>`Disconnected`  
+>>When a peer is disconnected for any reason, the state will change to `Disconnected`. Immediately
+>>following this, the state will change to either `Unavailable` or `Available`, depending on the
+>>peer's availability 
 >
->Example:
+>Examples:
 >
 >```
 >[{
@@ -295,11 +306,10 @@ None.
 
 When a peer is first discovered, `peerChanged` is called with the appropriate state.
 Each time the state of a peer changes, `peerChanged` will be called to notify the 
-application.
+application of the change.
 
 On some systems, `peerChanged` will be called immediately when the state of a peer 
-changes. On other systems, there may be a significant period of time between
-`peerChanged` callbacks.
-
+changes. On other systems, where polling is being used to detect the state of nearby peers,
+there may be a significant period of time between `peerChanged` callbacks.
 ---
 End of document.
