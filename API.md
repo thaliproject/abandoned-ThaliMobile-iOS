@@ -3,11 +3,12 @@ This document contains information about Thali API's.
 
 ---
 
-## Native API's Exposed to JavaScript Code
+## Native API Functions Exposed to JavaScript Code
 The following section contains Native API's that are exposed to JavaScript code.
 
 ---
-`GetDeviceName()`
+`GetDeviceName()`  
+*This is an optional API function that is used for scaffolding on iOS at this time.*
 
 *Description:*
 
@@ -27,7 +28,8 @@ The device name.
 On iOS, this returns `[[UIDevice currentDevice] name]`.
 
 ---
-`MakeGUID()`
+`MakeGUID()`  
+*This is an optional API function that is used for scaffolding on iOS at this time.*
 
 *Description:*
 
@@ -47,7 +49,8 @@ The new GUID.
 On iOS, this returns `[[NSUUID UUID] UUIDString]`.
 
 ---
-`GetKeyValue(key)`
+`GetKeyValue(key)`  
+*This is an optional API function that is used for scaffolding on iOS at this time.*
 
 *Description:*
 
@@ -68,7 +71,8 @@ The key value, if successful; otherwise, `undefined`.
 None.
 
 ---
-`SetKeyValue(key, value)`
+`SetKeyValue(key, value)`  
+*This is an optional API function that is used for scaffolding on iOS at this time.*
 
 *Description:*
 
