@@ -437,14 +437,29 @@ didReceiveStream:(NSInputStream *)stream
         {
             case MCSessionStateNotConnected:
                 [peerDescriptor setState:THEPeerDescriptorStateFound];
+                if ([[self delegate] respondsToSelector:@selector(peerNetworking:notConnectedToPeerIdentifier:)])
+                {
+                    [[self delegate] peerNetworking:self
+                       notConnectedToPeerIdentifier:[peerDescriptor peerIdentifier]];
+                }
                 break;
                 
             case MCSessionStateConnecting:
                 [peerDescriptor setState:THEPeerDescriptorStateConnecting];
+                if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectingToPeerIdentifier:)])
+                {
+                    [[self delegate] peerNetworking:self
+                         connectingToPeerIdentifier:[peerDescriptor peerIdentifier]];
+                }
                 break;
                 
             case MCSessionStateConnected:
                 [peerDescriptor setState:THEPeerDescriptorStateConnected];
+                if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectedToPeerIdentifier:)])
+                {
+                    [[self delegate] peerNetworking:self
+                          connectedToPeerIdentifier:[peerDescriptor peerIdentifier]];
+                }
                 break;
         }
     }

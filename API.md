@@ -105,9 +105,12 @@ Starts peer communications.
 *Params:* 
 
 `peerIdentifier`  
-`string` - Specifies the peer identifier. This `peerIdentifier` must be a valid GUID in string
-format.
->Example: BEEFCAFE-BEEF-CAFE-BEEF-CAFEBEEFCAFE
+`string` - Specifies the peer identifier. The `peerIdentifier` uniquely identifies a peer to
+other peers. 
+
+Example:
+
+> BEEFCAFE-BEEF-CAFE-BEEF-CAFEBEEFCAFE
 
 `peerName`  
 `string` - Specifies the peer name. The `peerName` should be a short name describing the peer.
@@ -232,7 +235,7 @@ Examples:
 ```
 
 ---
-`​peerChanged(peers)`
+`​peerAvailabilityChanged(peers)`
 
 *Description:*   
 
@@ -246,42 +249,19 @@ Called whenever a peer changes.
 Each `peer` object contains the following properties:
 
 >`peerIdentifier`  
->`string` - The UUID identifier of the peer.
+>`string` - The peer identifier.
 >
 >`peerName`  
 >`string` - The peer name.
 >
->`state`  
->`string` - The peer state.
->
->>Valid states are:
+>`peerAvailable`  
+>`boolean` - A value which indicates whether the peer is available.
 >>
->>`Unavailable`  
+>>`false`  
 >>The peer is unavailable. Calling `BeginConnectPeer` will fail.
 >>
->>`Available`  
+>>`true`  
 >>The peer is available. Calling `BeginConnectPeer` may succeed.
->>
->>`Connecting`  
->>After a successful call to `BeginConnectPeer`, the state will change to `Connecting` while
->>the connection is being established. The state will then  change to `Connected`, if the
->>connection was successfully established. If the connection could not be established, the
->>state will change to `ConnectFailed`, and then to either `Unavailable` or `Available`,
->>depending on the peer's availability.
->>
->>`Connected`  
->>After a call to `BeginConnectPeer`, the state will change to `Connected`, if a connection was
->>successfully established.
->>
->>`ConnectFailed`  
->>After a call to `BeginConnectPeer`, the state will change to `ConnectFailed`, if a connection
->>could not be established. Immediately following this, the state will change to either `Unavailable`
->>or `Available`, depending on the peer's availability 
->>
->>`Disconnected`  
->>When a peer is disconnected for any reason, the state will change to `Disconnected`. Immediately
->>following this, the state will change to either `Unavailable` or `Available`, depending on the
->>peer's availability 
 >
 >Examples:
 >
@@ -289,12 +269,12 @@ Each `peer` object contains the following properties:
 >[{
 >  "peerIdentifier": "F50F4805-A2AB-4249-9E2F-4AF7420DF5C7",
 >  "peerName": "Her Phone",
->  "state": "Available"
+>  "peerAvailable": true
 >},
 {
 >  "peerIdentifier": "1B378E14-0B99-4E16-8275-562AF66BE8D9",
 >  "peerName": "His Phone",
->  "state": "Unavailable"
+>  "peerAvailable": false
 >}]
 >```
 
@@ -311,5 +291,70 @@ application of the change.
 On some systems, `peerChanged` will be called immediately when the state of a peer 
 changes. On other systems, where polling is being used to detect the state of nearby peers,
 there may be a significant period of time between `peerChanged` callbacks.
+
+---
+`​peerConnecting(peerIdentifier)`
+
+*Description:*   
+
+Called when a peer is connecting.
+
+*Params:*
+
+`peerIdentifier`  
+`string` - The peer identifier.
+
+*Returns:*
+
+None. 
+
+*Notes:* 
+
+After 'BeginConnectPeer' is called and successfully returns, `peerConnecting` will be called
+to indicate that the connection to the peer is being established.
+
+---
+`​peerConnected(peerIdentifier)`
+
+*Description:*   
+
+Called when a peer is connected.
+
+*Params:*
+
+`peerIdentifier`  
+`string` - The peer identifier.
+
+*Returns:*
+
+None. 
+
+*Notes:* 
+
+None.
+
+---
+`​peerNotConnected(peerIdentifier)`
+
+*Description:*   
+
+Called when a peer is not connected.
+
+*Params:*
+
+`peerIdentifier`  
+`string` - The peer identifier.
+
+*Returns:*
+
+None. 
+
+*Notes:* 
+
+`peerNotConnected` is called to indicate that a peer is not connected. 
+
+This may occur immediately after a call to `BeginConnectPeer`. It may occur after `peerConnecting`
+has been called to indicate that the connection could not be established.
+
 ---
 End of document.

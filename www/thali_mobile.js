@@ -32,6 +32,8 @@
     if (logEntriesDiv) {
       var logEntryDiv = document.createElement('div');
       logEntryDiv.className = 'logEntry';
+      logEntry = logEntry.replace('\n', '<br/>');
+      logEntry = logEntry.replace(' ', '&nbsp;');
       logEntryDiv.innerHTML = logEntry;
       logEntriesDiv.appendChild(logEntryDiv);
     }

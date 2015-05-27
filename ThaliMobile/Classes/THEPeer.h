@@ -15,7 +15,9 @@ typedef NS_ENUM(NSUInteger, THEPeerState)
     THEPeerStateUnavailable     = 0,
     THEPeerStateAvailable       = 1,
     THEPeerStateConnecting      = 2,
-    THEPeerStateConnected       = 3
+    THEPeerStateConnectFailed   = 3,
+    THEPeerStateConnected       = 4,
+    THEPeerStateDisconnected    = 5,
 };
 
 // THEPeer interface.
@@ -24,7 +26,7 @@ typedef NS_ENUM(NSUInteger, THEPeerState)
 // Properties.
 @property (nonatomic, readonly) NSUUID * identifier;
 @property (nonatomic, readonly) NSString * name;
-@property (nonatomic) THEPeerState state;
+@property (nonatomic) BOOL available;
 
 // Class initializer.
 - (instancetype)initWithIdentifier:(NSUUID *)peerIdentifier

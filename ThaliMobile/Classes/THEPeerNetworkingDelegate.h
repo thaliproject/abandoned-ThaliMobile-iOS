@@ -22,12 +22,16 @@
 - (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
  didLosePeerIdentifier:(NSUUID *)peerIdentifier;
 
-// Notifies the delegate that a peer was connected.
+// Notifies the delegate that a peer is connecting.
 - (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
-didConnectPeerIdentifier:(NSUUID *)peerIdentifier;
+connectingToPeerIdentifier:(NSUUID *)peerIdentifier;
 
-// Notifies the delegate that a peer was disconnected.
+// Notifies the delegate that a peer is connected.
 - (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
-didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier;
+connectedToPeerIdentifier:(NSUUID *)peerIdentifier;
+
+// Notifies the delegate that a peer is not connected.
+- (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
+notConnectedToPeerIdentifier:(NSUUID *)peerIdentifier;
 
 @end

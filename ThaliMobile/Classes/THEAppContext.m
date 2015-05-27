@@ -36,6 +36,12 @@
 #import "THEAppContext.h"
 #import "THEPeer.h"
 
+// JavaScript callbacks.
+NSString * const kPeerAvailabilityChanged   = @"peerAvailabilityChanged";
+NSString * const kPeerConnecting            = @"peerConnecting";
+NSString * const kPeerConnected             = @"peerConnected";
+NSString * const kPeerNotConnected          = @"peerNotConnected";
+
 // THEAppContext (THEPeerBluetoothDelegate) interface.
 @interface THEAppContext (THEPeerBluetoothDelegate)
 @end
@@ -178,29 +184,26 @@
         // Obtain the peer identifier.
         NSString * peerIdentifier = params[0];
         
-        // Connect to the peer.
+        // Connect the peer.
         BOOL result = [self connectPeerWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:peerIdentifier]];
         
         // Return the result.
         [JXcore callEventCallback:callbackId
                        withParams:@[@(result)]];
-        
-    } withName:@"ConnectPeer"];
+    } withName:@"BeginConnectPeer"];
     
     // DisconnectPeer native block.
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
         // Obtain the peer identifier.
-        //NSString * peerIdentifier = params[0];
+        NSString * peerIdentifier = params[0];
         
-        // Disconnect to the peer.
-        BOOL result = NO;//[self connectPeerWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:peerIdentifier]];
+        // Disconnect the peer.
+        BOOL result = [self disconnectPeerWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:peerIdentifier]];
         
         // Return the result.
         [JXcore callEventCallback:callbackId
                        withParams:@[@(result)]];
-        
     } withName:@"DisconnectPeer"];
-    
 }
 
 // Starts communications.
@@ -224,9 +227,11 @@
                                                                 peerName:peerName];
         [_peerNetworking setDelegate:(id<THEPeerNetworkingDelegate>)self];
 
+        // Start peer Bluetooth and peer networking.
         [_peerBluetooth start];
         [_peerNetworking start];
         
+        // Once started, fire the network changed event.
         OnMainThreadAfterTimeInterval(1.0, ^{
             [self fireNetworkChangedEvent];
             reachabilityHandlerReference = [[NPReachability sharedInstance] addHandler:^(NPReachability * reachability) {
@@ -264,18 +269,20 @@
     // Lock.
     pthread_mutex_lock(&_mutex);
     
-    // Find the peer. If we didn't find it, return NO.
+    // Find the peer.
     THEPeer * peer = [_peers objectForKey:peerIdentifier];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    // If we didn't find the peer, return NO.
     if (!peer)
     {
-        pthread_mutex_unlock(&_mutex);
         return NO;
     }
-    
-    pthread_mutex_unlock(&_mutex);
 
+    // Connect the peer and return YES, indicating that we started the connection process.
     [_peerNetworking connectPeerWithPeerIdentifier:peerIdentifier];
-
     return YES;
 }
 
@@ -293,16 +300,18 @@
     
     // Find the peer. If we didn't find it, return NO.
     THEPeer * peer = [_peers objectForKey:peerIdentifier];
-    if (!peer)
-    {
-        pthread_mutex_unlock(&_mutex);
-        return NO;
-    }
-    
+
+    // Unlock.
     pthread_mutex_unlock(&_mutex);
 
-    [_peerNetworking  disconnectPeerWithPeerIdentifier:peerIdentifier];
-    
+    // If we didn't find the peer, return NO.
+    if (!peer)
+    {
+        return NO;
+    }
+
+    // Disconnect the peer with the specified peer identifier.
+    [_peerNetworking disconnectPeerWithPeerIdentifier:peerIdentifier];
     return YES;
 }
 
@@ -336,9 +345,9 @@ didConnectPeerIdentifier:(NSUUID *)peerIdentifier
     // Unlock.
     pthread_mutex_unlock(&_mutex);
 
-    // Fire the peerChanged event.
+    // Fire the peerAvailabilityChanged event.
     OnMainThread(^{
-        [JXcore callEventCallback:@"peerChanged"
+        [JXcore callEventCallback:kPeerAvailabilityChanged
                          withJSON:[peer JSON]];
     });
 }
@@ -376,14 +385,14 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
     }
     
     // Update the peer state.
-    [peer setState:THEPeerStateAvailable];
+    [peer setAvailable:YES];
     
     // Unlock.
     pthread_mutex_unlock(&_mutex);
 
-    // Fire the peerChanged event.
+    // Fire the peerAvailabilityChanged event.
     OnMainThread(^{
-        [JXcore callEventCallback:@"peerChanged"
+        [JXcore callEventCallback:kPeerAvailabilityChanged
                          withJSON:[peer JSON]];
     });
 }
@@ -399,34 +408,96 @@ didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
     THEPeer * peer = _peers[peerIdentifier];
     if (peer)
     {
-        [peer setState:THEPeerStateUnavailable];
+        [peer setAvailable:NO];
     }
     
     // Unlock.
     pthread_mutex_unlock(&_mutex);
     
-    // Fire the peerChanged event.
+    // Fire the peerAvailabilityChanged event.
     if (peer)
     {
         OnMainThread(^{
-            [JXcore callEventCallback:@"peerChanged"
+            [JXcore callEventCallback:kPeerAvailabilityChanged
                              withJSON:[peer JSON]];
         });
     }
 }
 
-// Notifies the delegate that a peer was connected.
+// Notifies the delegate that a peer is connecting.
 - (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
-didConnectPeerIdentifier:(NSUUID *)peerIdentifier
+connectingToPeerIdentifier:(NSUUID *)peerIdentifier
 {
+    // Lock.
+    pthread_mutex_lock(&_mutex);
     
+    // Find the peer.
+    THEPeer * peer = _peers[peerIdentifier];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    // Fire the peerConnecting event.
+    if (peer)
+    {
+        OnMainThread(^{
+            [JXcore callEventCallback:kPeerConnecting
+                           withParams:@[[[peer identifier] UUIDString]]];
+        });
+    }
 }
+
+// Notifies the delegate that a peer is connected.
+- (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
+connectedToPeerIdentifier:(NSUUID *)peerIdentifier
+{
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // Find the peer.
+    THEPeer * peer = _peers[peerIdentifier];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    // Fire the peerConnected event.
+    if (peer)
+    {
+        OnMainThread(^{
+            [JXcore callEventCallback:kPeerConnected
+                           withParams:@[[[peer identifier] UUIDString]]];
+        });
+    }
+}
+
+// Notifies the delegate that a peer is not connected.
+- (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
+notConnectedToPeerIdentifier:(NSUUID *)peerIdentifier
+{
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // Find the peer.
+    THEPeer * peer = _peers[peerIdentifier];
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    // Fire the peerDisconnected event.
+    if (peer)
+    {
+        OnMainThread(^{
+            [JXcore callEventCallback:kPeerNotConnected
+                           withParams:@[[[peer identifier] UUIDString]]];
+        });
+    }
+}
+
 
 // Notifies the delegate that a peer was disconnected.
 - (void)peerNetworking:(THEPeerNetworking *)peerBluetooth
 didDisconnectPeerIdentifier:(NSUUID *)peerIdentifier
 {
-    
 }
 
 @end

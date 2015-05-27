@@ -42,34 +42,10 @@
 // Converts THEPeer to JSON.
 - (NSString *)JSON
 {
-    NSString * state;
-    switch ([self state])
-    {
-        case THEPeerStateUnavailable:
-            state = @"Unavailable";
-            break;
-            
-        case THEPeerStateAvailable:
-            state = @"Available";
-            break;
-            
-        case THEPeerStateConnecting:
-            state = @"Connecting";
-            break;
-            
-        case THEPeerStateConnected:
-            state = @"Connected";
-            break;
-            
-        default:
-            state = @"null";
-            break;
-    }
-    
-    return [NSString stringWithFormat:@"[ { \"peerIdentifier\": \"%@\", \"peerName\": \"%@\", \"state\": \"%@\" } ]",
+    return [NSString stringWithFormat:@"[ { \"peerIdentifier\": \"%@\", \"peerName\": \"%@\", \"peerAvailable\": %@ } ]",
             [[self identifier] UUIDString],
             [self name],
-            state];
+            [self available] ? @"true" : @"false"];
 }
 
 @end
