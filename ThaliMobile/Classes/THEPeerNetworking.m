@@ -26,6 +26,9 @@
 //
 
 #import <pthread.h>
+#include "jx.h"
+#import "JXcore.h"
+#import <TSNThreading.h>
 #import <MultipeerConnectivity/MultipeerConnectivity.h>
 #import "THEPeerNetworking.h"
 
@@ -52,6 +55,8 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 @property (nonatomic) NSUUID * peerIdentifier;
 @property (nonatomic) NSString * peerName;
 @property (nonatomic) THEPeerDescriptorState state;
+@property (nonatomic) NSOutputStream * outputStream;
+@property (nonatomic) NSInputStream * inputStream;
 
 // Class initializer.
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
@@ -280,8 +285,33 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 // Connects from the peer with the specified peer identifier.
 - (BOOL)disconnectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier
 {
- 
-    return YES;
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // See if we have a peer descriptor matching the peer identifier.
+    NSArray * peers = [_peers allValues];
+    THEPeerDescriptor * peerDescriptor = nil;
+    for (int i = 0; !peerDescriptor && i < [peers count]; i++)
+    {
+        THEPeerDescriptor * peerDescriptorToCheck = (THEPeerDescriptor *)peers[i];
+        if ([peerIdentifier isEqual:[peerDescriptorToCheck peerIdentifier]])
+        {
+            peerDescriptor = peerDescriptorToCheck;
+        }
+    }
+    
+    // If we found a peer descriptor matching the peer identifier, cancel the peer connection.
+    if (peerDescriptor)
+    {
+        // Cancel the connection to the peer.
+        [_session cancelConnectPeer:[peerDescriptor peerID]];
+    }
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
+    
+    // Done.
+    return peerDescriptor != nil;
 }
 
 @end
@@ -416,6 +446,34 @@ didReceiveStream:(NSInputStream *)stream
        withName:(NSString *)streamName
        fromPeer:(MCPeerID *)peerID
 {
+    // Lock.
+    pthread_mutex_lock(&_mutex);
+    
+    // Find the peer descriptor.
+    THEPeerDescriptor * peerDescriptor = (THEPeerDescriptor *)_peers[peerID];
+    
+    // If we found the peer descriptor, set its input stream.
+    if (peerDescriptor)
+    {
+        NSLog(@"---------> Received stream %@", streamName);
+        [peerDescriptor setInputStream:stream];
+        
+        // Unlock.
+        pthread_mutex_unlock(&_mutex);
+
+        if ([peerDescriptor inputStream] && [peerDescriptor outputStream])
+        {
+            OnMainThread(^{
+                [JXcore callEventCallback:@"logInCordova"
+                                 withParams:@[@"WE HAVE BOTH STREAMS!!!"]];
+            });
+        }
+    }
+    else
+    {
+        // Unlock.
+        pthread_mutex_unlock(&_mutex);
+    }
 }
 
 // Notifies the delegate that the state of a nearby peer changed.
@@ -435,32 +493,76 @@ didReceiveStream:(NSInputStream *)stream
         // Log.
         switch (state)
         {
+            // Not connected.
             case MCSessionStateNotConnected:
+            {
+                // Update the state.
                 [peerDescriptor setState:THEPeerDescriptorStateFound];
+                
+                // Unlock.
+                pthread_mutex_unlock(&_mutex);
+
+                // Notify the delegate.
                 if ([[self delegate] respondsToSelector:@selector(peerNetworking:notConnectedToPeerIdentifier:)])
                 {
                     [[self delegate] peerNetworking:self
                        notConnectedToPeerIdentifier:[peerDescriptor peerIdentifier]];
                 }
-                break;
+                return;
+            }
                 
+            // Connecting.
             case MCSessionStateConnecting:
+            {
+                // Update the state.
                 [peerDescriptor setState:THEPeerDescriptorStateConnecting];
+                
+                // Unlock.
+                pthread_mutex_unlock(&_mutex);
+                
+                // Notify the delegate.
                 if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectingToPeerIdentifier:)])
                 {
                     [[self delegate] peerNetworking:self
                          connectingToPeerIdentifier:[peerDescriptor peerIdentifier]];
                 }
-                break;
+                return;
+            }
                 
+            // Connected.
             case MCSessionStateConnected:
-                [peerDescriptor setState:THEPeerDescriptorStateConnected];
-                if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectedToPeerIdentifier:)])
+            {
+                // Start the output stream. If this fails, cancel the connection.
+                NSError * error;
+                NSOutputStream * outputStream = [_session startStreamWithName:@"OutputStream"
+                                                                       toPeer:peerID
+                                                                        error:&error];
+                if (outputStream)
                 {
-                    [[self delegate] peerNetworking:self
-                          connectedToPeerIdentifier:[peerDescriptor peerIdentifier]];
+                    // Update the peer descriptor.
+                    [peerDescriptor setState:THEPeerDescriptorStateConnected];
+                    [peerDescriptor setOutputStream:outputStream];
+
+                    // Unlock.
+                    pthread_mutex_unlock(&_mutex);
+                    
+                    // Notify the delegate.
+                    if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectedToPeerIdentifier:)])
+                    {
+                        [[self delegate] peerNetworking:self
+                              connectedToPeerIdentifier:[peerDescriptor peerIdentifier]];
+                    }
                 }
-                break;
+                else
+                {
+                    // Unlock.
+                    pthread_mutex_unlock(&_mutex);
+
+                    // Cancel the connection to the peer.
+                    [_session cancelConnectPeer:peerID];
+                }
+                return;
+            }
         }
     }
     
