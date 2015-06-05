@@ -60,19 +60,19 @@
     cordova('StopPeerCommunications').callNative(function () {});
   };
       
-  // Begins connecting to peer.
-  function beginConnectPeer(peerIdentifier) {
+  // Begins connecting to a peer server.
+  function beginConnectToPeerServer(peerIdentifier) {
     var result;
-    cordova('BeginConnectPeer').callNative(peerIdentifier, function (value) {
+    cordova('BeginConnectToPeerServer').callNative(peerIdentifier, function (value) {
       result = Boolean(value);
     });
     return result;
   };
 
-  // Disconnects peer.
-  function disconnectPeer(peerIdentifier) {
+  // Disconnects from a peer server.
+  function disconnectFromPeerServer(peerIdentifier) {
     var result;
-    cordova('DisconnectPeer').callNative(peerIdentifier, function (value) {
+    cordova('DisconnectFromPeerServer').callNative(peerIdentifier, function (value) {
       result = Boolean(value);
     });
     return result;
@@ -121,33 +121,37 @@
     }                             
   });
   
-  // Register peerConnecting callback.
-  cordova('peerConnecting').registerToNative(function (callback, args) {
-    var peerIdentifier = args[0];
-    logInCordova('    Connecting peer ' + peerIdentifier);
-  });
-  
-  function makePeerDisconnector(peerIdentifier) {
+  function makePeerServerDisconnector(peerIdentifier) {
     return function () {
       logInCordova('Peer disconnector called for ' + peerIdentifier);
-      disconnectPeer(peerIdentifier);
+      disconnectFromPeerServer(peerIdentifier);
     };
   };
-
-  // Register peerConnected callback.
-  cordova('peerConnected').registerToNative(function (callback, args) {
-    var peerIdentifier = args[0];
-    logInCordova('    Connected peer ' + peerIdentifier);
-
+  
+ /*
     if (peerName === 'DX 2') {
-      setTimeout(makePeerDisconnector(peerIdentifier), 30 * 1000);      
+      setTimeout(makePeerServerDisconnector(peerIdentifier), 30 * 1000);      
     }
+*/
+
+  // Register connectingToPeerServer callback.
+  cordova('connectingToPeerServer').registerToNative(function (callback, args) {
+    var peerIdentifier = args[0];
+    logInCordova('    Connecting to peer server ' + peerIdentifier);
+  });
+  
+  // Register connectedToPeerServer callback.
+  cordova('connectedToPeerServer').registerToNative(function (callback, args) {
+    var peerIdentifier = args[0];
+    logInCordova('    Connected to peer server ' + peerIdentifier);
+
+    setTimeout(makePeerServerDisconnector(peerIdentifier), 30 * 1000);      
   });
 
-  // Register peerNotConnected callback.
-  cordova('peerNotConnected').registerToNative(function (callback, args) {
+  // Register notConnectedToPeerServer callback.
+  cordova('notConnectedToPeerServer').registerToNative(function (callback, args) {
     var peerIdentifier = args[0];
-    logInCordova('    Not connected peer ' + peerIdentifier);
+    logInCordova('    Not connected to peer server ' + peerIdentifier);
 
     for (var i = 0; i < _peersSynchronizing.length; i++) {
       if (_peersSynchronizing[i].peerIdentifier === peerIdentifier) {
@@ -156,7 +160,26 @@
       }
     }
   });
- 
+  
+  
+  // Register peerClientConnecting callback.
+  cordova('peerClientConnecting').registerToNative(function (callback, args) {
+    var peerIdentifier = args[0];
+    logInCordova('    Peer client connecting ' + peerIdentifier);
+  });
+  
+  // Register peerClientConnected callback.
+  cordova('peerClientConnected').registerToNative(function (callback, args) {
+    var peerIdentifier = args[0];
+    logInCordova('    Peer client connected ' + peerIdentifier);
+  });
+
+  // Register peerClientNotConnected callback.
+  cordova('peerClientNotConnected').registerToNative(function (callback, args) {
+    var peerIdentifier = args[0];
+    logInCordova('    Peer client not connected ' + peerIdentifier);
+  });
+  
   // Get the peer identifier and peer name.
   var peerIdentifier = getPeerIdentifier();
   var peerName = getDeviceName();
@@ -164,31 +187,26 @@
   // Start peer communications.
   startPeerCommunications(peerIdentifier, peerName);
 
-  if (peerName === 'DX 2')
-  {
-    var peerSyncInterval = setInterval(function () {
-      
-      // If we're still synchonizing one or more peers, skip this interval.
-      if (_peersSynchronizing.length != 0) {
-        logInCordova('peerSync still running');      
-        return;
-      }
-      
-      // Start sync.
-      logInCordova('peerSync starting');
-      for (var i = 0; i < _peers.length; i++) {
-        var peer = _peers[i];
-  
-        if (peer.peerAvailable && beginConnectPeer(peer.peerIdentifier)) {
-          _peersSynchronizing.push(peer);        
-          logInCordova('    Begin connect peer ' + peer.peerIdentifier);
-        } else {
-          logInCordova("    Can't connect peer " + peer.peerIdentifier);        
+    if (peerName === 'DX 2') {
+      var peerSyncInterval = setInterval(function () {
+        // If we're still synchonizing one or more peers, skip this interval.
+        if (_peersSynchronizing.length != 0) {
+          logInCordova('peerSync still running');      
+          return;
         }
-      }
-    }, 10000);
+        
+        // Start sync.
+        logInCordova('peerSync starting');
+        for (var i = 0; i < _peers.length; i++) {
+          var peer = _peers[i];
     
-  }
-
-  
+          if (peer.peerAvailable && beginConnectToPeerServer(peer.peerIdentifier)) {
+            _peersSynchronizing.push(peer);        
+            logInCordova('    Begin connect to peer server ' + peer.peerIdentifier);
+          } else {
+            logInCordova("    Can't connect to peer server " + peer.peerIdentifier);        
+          }
+        }
+      }, 10000);
+    }
 })();

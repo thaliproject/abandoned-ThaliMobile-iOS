@@ -152,11 +152,11 @@ stop the Multipeer Connectivity Framework Advertiser and Browser.
 Other platforms will use other techniques.
 
 ---
-`boolean BeginConnectPeer(peerIdentifier)`  
+`boolean BeginConnectToPeerServer(peerIdentifier)`  
 
 *Description:*   
 
-Begins an attempt to connect to the peer with the specified peer identifier.
+Begins an attempt to connect to the peer server with the specified peer identifier.
 
 *Params:* 
 
@@ -170,18 +170,18 @@ Begins an attempt to connect to the peer with the specified peer identifier.
 
 *Notes:* 
 
-Upon successful return, the underlying system will attempt to connect to the peer 
+Upon successful return, the underlying system will attempt to connect to the peer server 
 with the specified peer identifier. 
 
-The `peerChanged` callback will be called when the state of a peer has changed. See
-below.
+The `connectingToPeerServer`, `connectedToPeerServer`, and `notConnectedToPeerServer` callbacks will
+be called as the state of a peer server connection changes. See below.
 
 ---
-`boolean DisconnectPeer(peerIdentifier)`
+`boolean DisconnectFromPeerServer(peerIdentifier)`
 
 *Description:*   
 
-Disconnect from the peer with the specified peer identifier.
+Disconnect from the peer server with the specified peer identifier.
 
 *Params:* 
 
@@ -195,11 +195,10 @@ Disconnect from the peer with the specified peer identifier.
 
 *Notes:* 
 
-The `peerChanged` callback will be called when the state of a peer has changed. See
-below.
+The `notConnectedToPeerServer` callback will be called when the state of a peer server connection 
+changes. See below.
 
 ---
-
 ## JavaScript Callbacks Called from Native Code
 The following section contains JaavScript callbacks that are called by native code.
 
@@ -239,12 +238,12 @@ Examples:
 
 *Description:*   
 
-Called whenever a peer changes.
+Called whenever the availability of a peer changes.
 
 *Params:*
 
 `peers`  
-`array` - A JSON array containing a `peer` object for each peer that changed
+`array` - A JSON array containing a `peer` object for each peer.
 
 Each `peer` object contains the following properties:
 
@@ -258,10 +257,10 @@ Each `peer` object contains the following properties:
 >`boolean` - A value which indicates whether the peer is available.
 >>
 >>`false`  
->>The peer is unavailable. Calling `BeginConnectPeer` will fail.
+>>The peer is unavailable. Calling `BeginConnectToPeerServer` will fail.
 >>
 >>`true`  
->>The peer is available. Calling `BeginConnectPeer` may succeed.
+>>The peer is available. Calling `BeginConnectToPeerServer` may succeed.
 >
 >Examples:
 >
@@ -284,41 +283,19 @@ None.
 
 *Notes:* 
 
-When a peer is first discovered, `peerChanged` is called with the appropriate state.
-Each time the state of a peer changes, `peerChanged` will be called to notify the 
-application of the change.
+When a peer is first discovered, `​peerAvailabilityChanged` is called. Each time the availability of a
+peer changes, `​peerAvailabilityChanged` will be called to notify the application of the change.
 
-On some systems, `peerChanged` will be called immediately when the state of a peer 
-changes. On other systems, where polling is being used to detect the state of nearby peers,
-there may be a significant period of time between `peerChanged` callbacks.
+On some systems, `​peerAvailabilityChanged` will be called immediately when the availability of a peer
+changes. On other systems, where polling is being used to detect the state of nearby peers, there
+may be a significant period of time between `​peerAvailabilityChanged` callbacks.
 
 ---
-`​peerConnecting(peerIdentifier)`
+`connectingToPeerServer(peerIdentifier)`
 
 *Description:*   
 
-Called when a peer is connecting.
-
-*Params:*
-
-`peerIdentifier`  
-`string` - The peer identifier.
-
-*Returns:*
-
-None. 
-
-*Notes:* 
-
-After 'BeginConnectPeer' is called and successfully returns, `peerConnecting` will be called
-to indicate that the connection to the peer is being established.
-
----
-`​peerConnected(peerIdentifier)`
-
-*Description:*   
-
-Called when a peer is connected.
+Called to indicate that a connection to the specified peer server is being established.
 
 *Params:*
 
@@ -334,16 +311,16 @@ None.
 None.
 
 ---
-`​peerNotConnected(peerIdentifier)`
+`connectedToPeerServer(peerIdentifier)`
 
 *Description:*   
 
-Called when a peer is not connected.
+Called to indicate that a connection to the specified peer server has been established.
 
 *Params:*
 
 `peerIdentifier`  
-`string` - The peer identifier.
+`string` - The peer identifier of the peer server.
 
 *Returns:*
 
@@ -351,10 +328,87 @@ None.
 
 *Notes:* 
 
-`peerNotConnected` is called to indicate that a peer is not connected. 
+None.
 
-This may occur immediately after a call to `BeginConnectPeer`. It may occur after `peerConnecting`
-has been called to indicate that the connection could not be established.
+---
+`notConnectedToPeerServer(peerIdentifier)`
+
+*Description:*   
+
+Called to indicate that a connection to the specified peer server could not be established or was closed.
+
+*Params:*
+
+`peerIdentifier`  
+`string` - The peer identifier of the peer server.
+
+*Returns:*
+
+None. 
+
+*Notes:* 
+
+None.
+
+---
+`peerClientConnecting(peerIdentifier)`
+
+*Description:*   
+
+Called to indicate that a peer client is connecting.
+
+*Params:*
+
+`peerIdentifier`  
+`string` - The peer identifier of the peer client.
+
+*Returns:*
+
+None. 
+
+*Notes:* 
+
+None.
+
+---
+`peerClientConnected(peerIdentifier)`
+
+*Description:*   
+
+Called to indicate that a peer client has connected.
+
+*Params:*
+
+`peerIdentifier`  
+`string` - The peer identifier of the peer client.
+
+*Returns:*
+
+None. 
+
+*Notes:* 
+
+None.
+
+---
+`peerClientNotConnected(peerIdentifier)`
+
+*Description:*   
+
+Called to indicate that a peer client is not connected.
+
+*Params:*
+
+`peerIdentifier`  
+`string` - The peer identifier of the peer client.
+
+*Returns:*
+
+None. 
+
+*Notes:* 
+
+None.
 
 ---
 End of document.

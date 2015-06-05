@@ -33,18 +33,18 @@
 #import "THEPeerNetworking.h"
 
 // Static declarations.
-static NSString * const PEER_ID_KEY     = @"ThaliPeerID";
-static NSString * const PEER_IDENTIFIER = @"PeerIdentifier";
-static NSString * const PEER_NAME       = @"PeerName";
+static NSString * const PEER_ID_KEY             = @"ThaliPeerID";
+static NSString * const PEER_IDENTIFIER         = @"PeerIdentifier";
+static NSString * const PEER_NAME               = @"PeerName";
+static NSString * const CLIENT_OUTPUT_STREAM    = @"ClientOutputStream";
+static NSString * const SERVER_OUTPUT_STREAM    = @"ServerOutputStream";
 
 // THEPeerDescriptorState enumeration.
 typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 {
-    THEPeerDescriptorStateFound         = 1,
-    THEPeerDescriptorStateLost          = 2,
-    THEPeerDescriptorStateInvited       = 3,
-    THEPeerDescriptorStateConnecting    = 4,
-    THEPeerDescriptorStateConnected     = 5
+    THEPeerDescriptorStateNotConnected  = 0,
+    THEPeerDescriptorStateConnecting    = 1,
+    THEPeerDescriptorStateConnected     = 2
 };
 
 // THEPeerDescriptor interface.
@@ -54,15 +54,20 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 @property (nonatomic) MCPeerID * peerID;
 @property (nonatomic) NSUUID * peerIdentifier;
 @property (nonatomic) NSString * peerName;
-@property (nonatomic) THEPeerDescriptorState state;
-@property (nonatomic) NSOutputStream * outputStream;
-@property (nonatomic) NSInputStream * inputStream;
+@property (nonatomic) BOOL found;
+@property (nonatomic) THEPeerDescriptorState serverState;
+@property (nonatomic) THEPeerDescriptorState clientState;
+
+@property (nonatomic) NSOutputStream * clientOutputStream;
+@property (nonatomic) NSInputStream * clientInputStream;
+
+@property (nonatomic) NSInputStream * serverInputStream;
+@property (nonatomic) NSOutputStream * serverOutputStream;
 
 // Class initializer.
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
-                      peerName:(NSString *)peerName
-                  initialState:(THEPeerDescriptorState)initialState;
+                      peerName:(NSString *)peerName;
 
 @end
 
@@ -76,7 +81,6 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
 - (instancetype)initWithPeerID:(MCPeerID *)peerID
                 peerIdentifier:(NSUUID *)peerIdentifier
                       peerName:(NSString *)peerName
-                  initialState:(THEPeerDescriptorState)initialState
 {
     // Initialize superclass.
     self = [super init];
@@ -91,7 +95,6 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     _peerID = peerID;
     _peerIdentifier = peerIdentifier;
     _peerName = peerName;
-    _state = initialState;
     
     // Done.
     return self;
@@ -132,9 +135,12 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     // The peer ID.
     MCPeerID * _peerID;
     
-    // The session.
-    MCSession * _session;
+    // The server session.
+    MCSession * _serverSession;
     
+    // The client session.
+    MCSession * _clientSession;
+
     // The nearby service advertiser.
     MCNearbyServiceAdvertiser * _nearbyServiceAdvertiser;
     
@@ -203,12 +209,18 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
         [userDefaults synchronize];
     }
     
-    // Allocate and initialize the session.
-    _session = [[MCSession alloc] initWithPeer:_peerID
+    // Allocate and initialize the server session.
+    _serverSession = [[MCSession alloc] initWithPeer:_peerID
                               securityIdentity:nil
                           encryptionPreference:MCEncryptionRequired];
-    [_session setDelegate:(id<MCSessionDelegate>)self];
+    [_serverSession setDelegate:(id<MCSessionDelegate>)self];
     
+    // Allocate and initialize the client session.
+    _clientSession = [[MCSession alloc] initWithPeer:_peerID
+                                    securityIdentity:nil
+                                encryptionPreference:MCEncryptionRequired];
+    [_clientSession setDelegate:(id<MCSessionDelegate>)self];
+
     // Allocate and initialize the nearby service advertizer.
     _nearbyServiceAdvertiser = [[MCNearbyServiceAdvertiser alloc] initWithPeer:_peerID
                                                                  discoveryInfo:@{PEER_IDENTIFIER:   [_peerIdentifier UUIDString],
@@ -236,18 +248,20 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     [_nearbyServiceAdvertiser stopAdvertisingPeer];
     [_nearbyServiceBrowser stopBrowsingForPeers];
     
-    // Disconnect from the session.
-    [_session disconnect];
+    // Disconnect from the sessions.
+    [_serverSession disconnect];
+    [_clientSession disconnect];
     
     // Clean up.
     _nearbyServiceAdvertiser = nil;
     _nearbyServiceBrowser = nil;
-    _session = nil;
+    _serverSession = nil;
+    _clientSession = nil;
     _peerID = nil;
 }
 
-// Connects to the peer with the specified peer identifier.
-- (BOOL)connectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier
+// Connects to the peer server with the specified peer identifier.
+- (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
 {
     // Lock.
     pthread_mutex_lock(&_mutex);
@@ -264,13 +278,13 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
         }
     }
     
-    // If we found a peer descriptor matching the peer identifier, invite the peer.
-    if (peerDescriptor)
+    // If we found a peer descriptor matching the peer identifier, invite the peer to our client session.
+    // Semantically, we're inviting the peer into to our client session, so we can be a client of the peer's
+    // server.
+    if (peerDescriptor && [peerDescriptor clientState] == THEPeerDescriptorStateNotConnected)
     {
-        // Invite the peer to the session.
-        [peerDescriptor setState:THEPeerDescriptorStateInvited];
         [_nearbyServiceBrowser invitePeer:[peerDescriptor peerID]
-                                toSession:_session
+                                toSession:_clientSession
                               withContext:nil
                                   timeout:30];
     }
@@ -282,8 +296,8 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     return peerDescriptor != nil;
 }
 
-// Connects from the peer with the specified peer identifier.
-- (BOOL)disconnectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier
+// Connects from the peer server with the specified peer identifier.
+- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier
 {
     // Lock.
     pthread_mutex_lock(&_mutex);
@@ -304,7 +318,7 @@ typedef NS_ENUM(NSUInteger, THEPeerDescriptorState)
     if (peerDescriptor)
     {
         // Cancel the connection to the peer.
-        [_session cancelConnectPeer:[peerDescriptor peerID]];
+        [_clientSession cancelConnectPeer:[peerDescriptor peerID]];
     }
     
     // Unlock.
@@ -325,14 +339,15 @@ didReceiveInvitationFromPeer:(MCPeerID *)peerID
        withContext:(NSData *)context
  invitationHandler:(void (^)(BOOL accept, MCSession * session))invitationHandler
 {
-    // Accept the invitation.
-    invitationHandler(YES, _session);
+    // Accept the invitation in our server session.
+    invitationHandler(YES, _serverSession);
 }
 
 // Notifies the delegate that advertisement failed.
 - (void)advertiser:(MCNearbyServiceAdvertiser *)advertiser
 didNotStartAdvertisingPeer:(NSError *)error
 {
+    // TODO, error handing.
 }
 
 @end
@@ -356,9 +371,8 @@ withDiscoveryInfo:(NSDictionary *)info
     {
         peerDescriptor = [[THEPeerDescriptor alloc]initWithPeerID:peerID
                                                    peerIdentifier:[[NSUUID alloc] initWithUUIDString:info[PEER_IDENTIFIER]]
-                                                         peerName:info[PEER_NAME]
-                                                     initialState:THEPeerDescriptorStateFound];
-        
+                                                         peerName:info[PEER_NAME]];
+        [peerDescriptor setFound:YES];
         _peers[peerID] = peerDescriptor;
     }
 
@@ -387,8 +401,7 @@ withDiscoveryInfo:(NSDictionary *)info
     // If we have seen this peer, process the event.
     if (peerDescriptor)
     {
-        // Clear the connectable flag.
-        [peerDescriptor setState:THEPeerDescriptorStateLost];
+        [peerDescriptor setFound:NO];
     }
     
     // Unlock.
@@ -442,7 +455,7 @@ didFinishReceivingResourceWithName:(NSString *)resourceName
 
 // Notifies the delegate that the local peer received a stream from a nearby peer.
 - (void)session:(MCSession *)session
-didReceiveStream:(NSInputStream *)stream
+didReceiveStream:(NSInputStream *)inputStream
        withName:(NSString *)streamName
        fromPeer:(MCPeerID *)peerID
 {
@@ -452,28 +465,70 @@ didReceiveStream:(NSInputStream *)stream
     // Find the peer descriptor.
     THEPeerDescriptor * peerDescriptor = (THEPeerDescriptor *)_peers[peerID];
     
-    // If we found the peer descriptor, set its input stream.
+    // If we found the peer descriptor, process the event.
     if (peerDescriptor)
     {
-        NSLog(@"---------> Received stream %@", streamName);
-        [peerDescriptor setInputStream:stream];
-        
-        // Unlock.
-        pthread_mutex_unlock(&_mutex);
-
-        if ([peerDescriptor inputStream] && [peerDescriptor outputStream])
+        // Process the stream by which session it's on.
+        if (session == _serverSession)
         {
-            OnMainThread(^{
-                [JXcore callEventCallback:@"logInCordova"
-                                 withParams:@[@"WE HAVE BOTH STREAMS!!!"]];
-            });
+            // When we receive the client output steam, it becomes the server input stream.
+            if ([streamName isEqualToString:CLIENT_OUTPUT_STREAM])
+            {
+                // Set the server input stream.
+                [peerDescriptor setServerInputStream:inputStream];
+
+                // Unlock.
+                pthread_mutex_unlock(&_mutex);
+                
+                // Notify the delegate that the peer client is connected.
+                if ([[self delegate] respondsToSelector:@selector(peerNetworking:peerClientConnectedWithPeerIdentifier:)])
+                {
+                    [[self delegate] peerNetworking:self
+              peerClientConnectedWithPeerIdentifier:[peerDescriptor peerIdentifier]];
+                }
+
+                // Done.
+                return;
+            }
+            else
+            {
+                NSLog(@"CAN'T HAPPEN!");
+            }
+        }
+        else if (session == _clientSession)
+        {
+            // When we receive the server output steam, it becomes the client input stream.
+            if ([streamName isEqualToString:SERVER_OUTPUT_STREAM])
+            {
+                // Set the client input stream.
+                [peerDescriptor setClientInputStream:inputStream];
+                
+                // Unlock.
+                pthread_mutex_unlock(&_mutex);
+                
+                // Notify the delegate that the peer client is connected to the peer server.
+                if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectedToPeerServerWithPeerIdentifier:)])
+                {
+                    [[self delegate] peerNetworking:self
+            connectedToPeerServerWithPeerIdentifier:[peerDescriptor peerIdentifier]];
+                }
+                
+                // Done.
+                return;
+            }
+            else
+            {
+                NSLog(@"CAN'T HAPPEN!");
+            }
+        }
+        else
+        {
+            NSLog(@"CAN'T HAPPEN!");
         }
     }
-    else
-    {
-        // Unlock.
-        pthread_mutex_unlock(&_mutex);
-    }
+    
+    // Unlock.
+    pthread_mutex_unlock(&_mutex);
 }
 
 // Notifies the delegate that the state of a nearby peer changed.
@@ -490,78 +545,158 @@ didReceiveStream:(NSInputStream *)stream
     // If we found the peer descriptor, process the event.
     if (peerDescriptor)
     {
-        // Log.
-        switch (state)
+        if (session == _serverSession)
         {
-            // Not connected.
-            case MCSessionStateNotConnected:
+            // Log.
+            switch (state)
             {
-                // Update the state.
-                [peerDescriptor setState:THEPeerDescriptorStateFound];
-                
-                // Unlock.
-                pthread_mutex_unlock(&_mutex);
-
-                // Notify the delegate.
-                if ([[self delegate] respondsToSelector:@selector(peerNetworking:notConnectedToPeerIdentifier:)])
+                // Not connected.
+                case MCSessionStateNotConnected:
                 {
-                    [[self delegate] peerNetworking:self
-                       notConnectedToPeerIdentifier:[peerDescriptor peerIdentifier]];
-                }
-                return;
-            }
-                
-            // Connecting.
-            case MCSessionStateConnecting:
-            {
-                // Update the state.
-                [peerDescriptor setState:THEPeerDescriptorStateConnecting];
-                
-                // Unlock.
-                pthread_mutex_unlock(&_mutex);
-                
-                // Notify the delegate.
-                if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectingToPeerIdentifier:)])
-                {
-                    [[self delegate] peerNetworking:self
-                         connectingToPeerIdentifier:[peerDescriptor peerIdentifier]];
-                }
-                return;
-            }
-                
-            // Connected.
-            case MCSessionStateConnected:
-            {
-                // Start the output stream. If this fails, cancel the connection.
-                NSError * error;
-                NSOutputStream * outputStream = [_session startStreamWithName:@"OutputStream"
-                                                                       toPeer:peerID
-                                                                        error:&error];
-                if (outputStream)
-                {
-                    // Update the peer descriptor.
-                    [peerDescriptor setState:THEPeerDescriptorStateConnected];
-                    [peerDescriptor setOutputStream:outputStream];
-
+                    // Update the server state.
+                    [peerDescriptor setServerState:THEPeerDescriptorStateNotConnected];
+                    [peerDescriptor setServerInputStream:nil];
+                    [peerDescriptor setServerOutputStream:nil];
+                    
                     // Unlock.
                     pthread_mutex_unlock(&_mutex);
                     
                     // Notify the delegate.
-                    if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectedToPeerIdentifier:)])
+                    if ([[self delegate] respondsToSelector:@selector(peerNetworking:peerClientNotConnectedWithPeerIdentifier:)])
                     {
                         [[self delegate] peerNetworking:self
-                              connectedToPeerIdentifier:[peerDescriptor peerIdentifier]];
+               peerClientNotConnectedWithPeerIdentifier:[peerDescriptor peerIdentifier]];
                     }
+                    
+                    // Done.
+                    return;
                 }
-                else
+                    
+                // Connecting.
+                case MCSessionStateConnecting:
                 {
+                    // Update the state.
+                    [peerDescriptor setServerState:THEPeerDescriptorStateConnecting];
+                    
                     // Unlock.
                     pthread_mutex_unlock(&_mutex);
+                    
+                    // Notify the delegate.
+                    if ([[self delegate] respondsToSelector:@selector(peerNetworking:peerClientConnectingWithPeerIdentifier:)])
+                    {
+                        [[self delegate] peerNetworking:self
+                 peerClientConnectingWithPeerIdentifier:[peerDescriptor peerIdentifier]];
+                    }
 
-                    // Cancel the connection to the peer.
-                    [_session cancelConnectPeer:peerID];
+                    // Done.
+                    return;
                 }
-                return;
+                    
+                // Connected.
+                case MCSessionStateConnected:
+                {
+                    // Start the server output stream.
+                    NSError * error;
+                    NSOutputStream * serverOutputStream = [_serverSession startStreamWithName:SERVER_OUTPUT_STREAM
+                                                                                       toPeer:peerID
+                                                                                        error:&error];
+                    if (serverOutputStream)
+                    {
+                        // Set the server output stream. (Where we write data for the client.)
+                        [peerDescriptor setServerOutputStream:serverOutputStream];
+                        
+                        // Unlock.
+                        pthread_mutex_unlock(&_mutex);
+                    }
+                    else
+                    {
+                        // Unlock.
+                        pthread_mutex_unlock(&_mutex);
+                        
+                        // Cancel the connection to the peer.
+                        [_serverSession cancelConnectPeer:peerID];
+                    }
+
+                    // Done.
+                    return;
+                }
+            }
+        }
+        else if (session == _clientSession)
+        {
+            // Log.
+            switch (state)
+            {
+                // Not connected.
+                case MCSessionStateNotConnected:
+                {
+                    // Update the peer descriptor.
+                    [peerDescriptor setClientState:THEPeerDescriptorStateNotConnected];
+                    [peerDescriptor setClientOutputStream:nil];
+                    [peerDescriptor setClientInputStream:nil];
+                    
+                    // Unlock.
+                    pthread_mutex_unlock(&_mutex);
+                    
+                    // Notify the delegate.
+                    if ([[self delegate] respondsToSelector:@selector(peerNetworking:notConnectedToPeerServerWithPeerIdentifier:)])
+                    {
+                        [[self delegate] peerNetworking:self
+             notConnectedToPeerServerWithPeerIdentifier:[peerDescriptor peerIdentifier]];
+                    }
+
+                    // Done.
+                    return;
+                }
+                    
+                // Connecting.
+                case MCSessionStateConnecting:
+                {
+                    // Update the state.
+                    [peerDescriptor setClientState:THEPeerDescriptorStateConnecting];
+                    
+                    // Unlock.
+                    pthread_mutex_unlock(&_mutex);
+                    
+                    // Notify the delegate.
+                    if ([[self delegate] respondsToSelector:@selector(peerNetworking:connectingToPeerServerWithPeerIdentifier:)])
+                    {
+                        [[self delegate] peerNetworking:self
+               connectingToPeerServerWithPeerIdentifier:[peerDescriptor peerIdentifier]];
+                    }
+                    
+                    // Done.
+                    return;
+                }
+                    
+                // Connected.
+                case MCSessionStateConnected:
+                {
+                    // Start the client output stream. (Where we write data for the server.)
+                    NSError * error;
+                    NSOutputStream * clientOutputStream = [_clientSession startStreamWithName:CLIENT_OUTPUT_STREAM
+                                                                                       toPeer:peerID
+                                                                                        error:&error];
+                    if (clientOutputStream)
+                    {
+                        // Set the client output stream.
+                        [peerDescriptor setClientOutputStream:clientOutputStream];
+                        
+                        // Unlock.
+                        pthread_mutex_unlock(&_mutex);
+                    }
+                    else
+                    {
+                        // Unlock.
+                        pthread_mutex_unlock(&_mutex);
+                        
+                        // Cancel the connection to the peer.
+                        [_clientSession cancelConnectPeer:peerID];
+                    }
+
+                    // Done.
+                    return;
+                }
             }
         }
     }

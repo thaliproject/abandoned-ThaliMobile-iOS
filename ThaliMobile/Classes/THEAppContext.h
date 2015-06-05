@@ -43,10 +43,10 @@
 // Stops communications.
 - (void)stopCommunications;
 
-// Connects the peer with the specified peer idetifier.
-- (BOOL)connectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+// Connects to the peer server with the specified peer idetifier.
+- (BOOL)connectToPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
 
-// Disconnects the peer with the specified peer idetifier.
-- (BOOL)disconnectPeerWithPeerIdentifier:(NSUUID *)peerIdentifier;
+// Disconnects from the peer server with the specified peer idetifier.
+- (BOOL)disconnectFromPeerServerWithPeerIdentifier:(NSUUID *)peerIdentifier;
 
 @end
