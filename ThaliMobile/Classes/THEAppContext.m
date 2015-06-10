@@ -114,6 +114,8 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 // Defines JavaScript extensions.
 - (void)defineJavaScriptExtensions
 {
+    
+    
     // GetDeviceName native block.
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
         [JXcore callEventCallback:callbackId
@@ -159,6 +161,37 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
         }
     } withName:@"SetKeyValue"];
     
+    // NotifyUser native block.
+    [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
+        if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
+        {
+            // Done.
+            [JXcore callEventCallback:callbackId
+                           withParams:@[@(false)]];
+        }
+        else
+        {
+            // If the application is not active, post a local notification.
+            if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive)
+            {
+                UILocalNotification * localNotification = [[UILocalNotification alloc] init];
+                [localNotification setFireDate:[[NSDate alloc] init]];
+                [localNotification setAlertTitle:params[0]];
+                [localNotification setAlertBody:params[1]];
+                [localNotification setSoundName:UILocalNotificationDefaultSoundName];
+                [[UIApplication sharedApplication] scheduleLocalNotification:localNotification];
+            }
+            else
+            {
+                // The application is active, do something else. TODO.
+            }
+
+            // Done.
+            [JXcore callEventCallback:callbackId
+                           withParams:@[@(true)]];
+        }
+    } withName:@"NotifyUser"];
+    
     // StartPeerCommunications native block.
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
         if ([params count] != 3 || ![params[0] isKindOfClass:[NSString class]] || ![params[1] isKindOfClass:[NSString class]])
@@ -171,7 +204,7 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
             [self startCommunicationsWithPeerIdentifier:[[NSUUID alloc] initWithUUIDString:params[0]]
                                                peerName:params[1]];
             [JXcore callEventCallback:callbackId
-                           withParams:nil];
+                           withParams:@[@(true)]];
         }
     } withName:@"StartPeerCommunications"];
     
