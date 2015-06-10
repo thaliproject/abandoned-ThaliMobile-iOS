@@ -96,6 +96,31 @@ The key value, if successful; otherwise, `undefined`.
 None.
 
 ---
+`NotifyUser(title, message)`
+
+*Description:*
+
+Notifies the user in an operating system specific way.
+
+*Params:* 
+
+`title`  
+`string` - Specifies the title.
+
+`message`  
+`string` - Specifies the message.
+
+*Returns:*
+
+`boolean`  
+`true` if successfull; otherwise, `false`.
+
+*Notes:* 
+
+On iOS, this results in a UILocalNotification when the application is in the background.
+If the application is in the foreground, nothing happens and the function returns true.
+
+---
 `StartPeerCommunications(peerIdentifier, peerName)`
 
 *Description:*
