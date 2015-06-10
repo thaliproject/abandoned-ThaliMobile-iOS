@@ -87,6 +87,16 @@
     return result;
   };
 
+  // Register to native for appEnteringBackground.
+  cordova('appEnteringBackground').registerToNative(function (callback, args) {
+    logInCordova(callback + ' called');
+  });
+
+  // Register to native for appEnteredForeground.
+  cordova('appEnteredForeground').registerToNative(function (callback, args) {
+    logInCordova(callback + ' called');
+  });
+
   // Register to native for logInCordova.
   cordova('logInCordova').registerToNative(function (callback, args) {
     logInCordova(args[0]);

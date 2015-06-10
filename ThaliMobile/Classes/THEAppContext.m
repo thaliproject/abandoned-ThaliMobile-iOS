@@ -62,6 +62,12 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 // Fires the network changed event.
 - (void)fireNetworkChangedEvent;
 
+// UIApplicationWillResignActiveNotification callback.
+- (void)applicationWillResignActiveNotification:(NSNotification *)notification;
+
+// UIApplicationDidBecomeActiveNotification callback.
+- (void)applicationDidBecomeActiveNotification:(NSNotification *)notification;
+
 @end
 
 // THEAppContext implementation.
@@ -114,8 +120,6 @@ NSString * const kPeerClientNotConnected    = @"peerClientNotConnected";
 // Defines JavaScript extensions.
 - (void)defineJavaScriptExtensions
 {
-    
-    
     // GetDeviceName native block.
     [JXcore addNativeBlock:^(NSArray * params, NSString * callbackId) {
         [JXcore callEventCallback:callbackId
@@ -660,6 +664,19 @@ peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
     pthread_mutex_init(&_mutex, NULL);
     _peers = [[NSMutableDictionary alloc] init];
     
+    // Get the default notification center.
+    NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
+    
+    // Add our observers for application events.
+    [notificationCenter addObserver:self
+                           selector:@selector(applicationWillResignActiveNotification:)
+                               name:UIApplicationWillResignActiveNotification
+                             object:nil];
+    [notificationCenter addObserver:self
+                           selector:@selector(applicationDidBecomeActiveNotification:)
+                               name:UIApplicationDidBecomeActiveNotification
+                             object:nil];
+
     // Done.
     return self;
 }
@@ -687,5 +704,18 @@ peerClientNotConnectedWithPeerIdentifier:(NSUUID *)peerIdentifier
     });
 }
 
+// UIApplicationWillResignActiveNotification callback.
+- (void)applicationWillResignActiveNotification:(NSNotification *)notification
+{
+    [JXcore callEventCallback:@"appEnteringBackground"
+                   withParams:@[]];
+}
+
+// UIApplicationDidBecomeActiveNotification callback.
+- (void)applicationDidBecomeActiveNotification:(NSNotification *)notification
+{
+    [JXcore callEventCallback:@"appEnteredForeground"
+                   withParams:@[]];
+}
 
 @end
